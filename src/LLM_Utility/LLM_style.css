@@ -1,0 +1,78 @@
+/* sidebar backgroud */
+.st-emotion-cache-6qob1r,#root > div:nth-child(1) > div.withScreencast > div > div > div > section.st-emotion-cache-vk3wp9.eczjsme11 > div.st-emotion-cache-6qob1r.eczjsme3 > div.st-emotion-cache-16txtl3.eczjsme4{
+    background-color: #318CE7;
+}
+
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.main.st-emotion-cache-uf99v8.ea3mdgi5 > div.block-container.st-emotion-cache-z5fcl4.ea3mdgi4 > div > div > div.st-emotion-cache-ocqkz7.e1f1d6gn4{
+    height: 57px;
+}
+
+/* sidebar alignment */
+.st-emotion-cache-ue6h4q {
+    font-size: 14px;
+    color: rgb(49, 51, 63);
+    display: flex;
+    visibility: visible;
+    /* margin-bottom: 0.25rem; */
+    height: auto;
+    min-height: 0.8rem;
+    vertical-align: middle;
+    flex-direction: row;
+    -webkit-box-align: center;
+    align-items: center;
+}
+
+.st-emotion-cache-16txtl3 {
+    padding: 3rem 1.5rem;
+}
+
+
+/* sidebar logo */
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.st-emotion-cache-1fjb3ft.eczjsme11 > div.st-emotion-cache-6qob1r.eczjsme3 > div.st-emotion-cache-16txtl3.eczjsme4 > div > div > div > div.st-emotion-cache-ocqkz7.e1f1d6gn4 > div:nth-child(1) > div > div > div > div > div > div > img{
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.st-emotion-cache-1fjb3ft.eczjsme11 > div.st-emotion-cache-6qob1r.eczjsme3 > div.st-emotion-cache-16txtl3.eczjsme4 > div > div > div > div.st-emotion-cache-ocqkz7.e1f1d6gn4 > div:nth-child(2) > div > div > div > div > div > div > img{
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+/* Sidebar clear button */
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.st-emotion-cache-1fjb3ft.eczjsme11 > div.st-emotion-cache-6qob1r.eczjsme3 > div.st-emotion-cache-16txtl3.eczjsme4 > div > div > div > div:nth-child(9) > div > div > form > input[type=submit]{
+    width: 200%;
+    border-radius: 5px;
+    padding: 7px;
+    background-color: #32CD32;
+    border: none;
+}
+
+/*Sidebar clear button new*/
+#st-emotion-cache-5rimss e1nzilvr5{
+    width: 400%;
+    border-radius: 5px;
+    padding: 7px;
+    background-color: #32CD32;
+    border: none;
+}
+
+/* dmv logo */
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(3) > div > div > div > img{
+    max-width: 15% !important;
+    margin-left: 42%;
+    position: relative;
+    top: -65px;;
+}
+
+
+/* Title */
+#generative-ai-empowers-policy-analysis-for-employment-development{
+    text-align: center;
+    color: rgb(69, 69, 69);
+    font-size: 25px;
+    position: relative;
+    /* top: -85px !important; */
+}
+
+
+

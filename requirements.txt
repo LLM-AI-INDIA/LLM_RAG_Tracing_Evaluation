@@ -1,0 +1,10 @@
+langchain>=0.1.0
+langchain-community
+langchain-openai
+openai>=1
+arize-phoenix[evals]
+tiktoken
+openinference-instrumentation-langchain
+streamlit==1.39.0
+pypdf
+streamlit_chat
