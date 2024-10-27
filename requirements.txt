@@ -4,7 +4,9 @@ langchain-openai
 openai>=1
 arize-phoenix[evals]
 tiktoken
-openinference-instrumentation-langchain
+openinference-instrumentation-openai
 streamlit==1.39.0
 pypdf
 streamlit_chat
+boto3
+google-cloud-bigquery

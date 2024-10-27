@@ -1,8 +1,12 @@
 import streamlit as st
 from streamlit_chat import message
 import os
-import phoenix as px
-
+from src.LLM_source_code.LLM_RAG.LLM_Assistant_Call import  assistant_call
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import  retrieve_generated
+import datetime
+from google.cloud import bigquery
+import concurrent.futures
+import pandas as pd
 
 
 
@@ -16,61 +20,17 @@ from phoenix.evals import (
 )
 from phoenix.session.evaluation import get_qa_with_reference, get_retrieved_documents
 
-# https://python.langchain.com/docs/tutorials/pdf_qa/
 
 
 
-def RAG_Core_Impl(vAR_user_input, vAR_model):
-    # Move imports inside the function to avoid circular dependency
-    from langchain_community.document_loaders import PyPDFLoader
-    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-    from langchain_core.vectorstores import InMemoryVectorStore
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    from langchain.chains import RetrievalQA
-    from phoenix.otel import register
-    from openinference.instrumentation.langchain import LangChainInstrumentor
 
-    file_path = "DMVFAQ.pdf"
-    loader = PyPDFLoader(file_path)
-    docs = loader.load()
-
-    llm = ChatOpenAI(model=vAR_model)
+def Conversation(vAR_knowledge_base):
     
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    splits = text_splitter.split_documents(docs)
-    vectorstore = InMemoryVectorStore.from_documents(
-        documents=splits, embedding=OpenAIEmbeddings(model="text-embedding-ada-002"))
-
-    retriever = vectorstore.as_retriever()
-
-    chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        metadata={"application_type": "question_answering"},
-    )
-
-    PHOENIX_API_KEY = os.environ["PHOENIX_API_KEY"]
-    os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
-    os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com"
-
-    # Configuration is picked up from your environment variables
-    tracer_provider = register()
-    LangChainInstrumentor().instrument(tracer_provider=tracer_provider, skip_dep_check=True)
-
-    result = chain.invoke(vAR_user_input)
-    print("Result - ", result)
-
-    px_client = px.Client()
-
-    phoenix_df = px_client.get_spans_dataframe()
-
-    return result["result"], px_client, phoenix_df
-
-
-def Conversation(vAR_model):
     # Initialize session state
     if 'history' not in st.session_state:
+        st.session_state.vAR_question_list = []
+        st.session_state.vAR_assistant_response_list = []
+        st.session_state.vAR_bedrock_response_list = []
         st.session_state['history'] = []
 
     if 'generated' not in st.session_state:
@@ -82,6 +42,9 @@ def Conversation(vAR_model):
     # Container for the chat history
     response_container = st.container()
     container = st.container()
+    vAR_response = None
+    px_client = None
+    phoenix_df = None
 
     with container:
         with st.form(key='my_form', clear_on_submit=True):
@@ -90,10 +53,38 @@ def Conversation(vAR_model):
 
         if submit_button and vAR_user_input and vAR_user_input!='':
             # Generate response from the agent
-            vAR_response, px_client, phoenix_df = RAG_Core_Impl(vAR_user_input, vAR_model)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+
+                vAR_assistant = executor.submit(assistant_call,vAR_user_input)
+                vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input)
+
+                vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id = vAR_assistant.result()
+                vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id = vAR_bedrock.result()
+
+                print("vAR_assistant_result - ",vAR_assistant_response)
+                print("vAR_bedrock_result - ",vAR_response_bedrock)
+            
+
+
+            st.session_state.vAR_question_list.append(vAR_user_input)
+            st.session_state.vAR_assistant_response_list.append(vAR_assistant_response)
+            st.session_state.vAR_bedrock_response_list.append(vAR_response_bedrock)
+            
+            vAR_final_df = pd.DataFrame({"Question":st.session_state.vAR_question_list,"Assistant Response":st.session_state.vAR_assistant_response_list,"Bedrock Response":st.session_state.vAR_bedrock_response_list})
+
+            st.subheader("Conversation Result")
+
+            st.dataframe(vAR_final_df)
+
+            # Bigquery Insert
+            Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
+
+            
+
+            
             st.session_state['past'].append(vAR_user_input)
-            print(" vAR_response before append - ",vAR_response)
-            st.session_state['generated'].append(vAR_response)
+            st.session_state['generated'].append(vAR_assistant_response)
             
 
         if st.session_state['generated']:
@@ -112,7 +103,7 @@ def Conversation(vAR_model):
                             feedback_text = "thumbs up" if feedback == 1 else "thumbs down"
                             feedback_class = "thumbs-up" if feedback == 1 else "thumbs-down"
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
-    return vAR_user_input
+    return vAR_response,px_client, phoenix_df
 
 
 def LLM_RAG_Impl():
@@ -143,8 +134,13 @@ def LLM_RAG_Impl():
             st.subheader("Upload Knowledge Base")
         with col24:
             vAR_knowledge_base = st.file_uploader("Choose any type of file",accept_multiple_files=True)
+            
+            
+            
 
     if vAR_knowledge_base:
+        with open("DMV-FAQ.pdf", mode='wb') as w:
+            w.write(vAR_knowledge_base[0].getvalue())
         with col17:
             st.subheader("Select LLM")
             st.write("")
@@ -153,61 +149,60 @@ def LLM_RAG_Impl():
             st.write("")
 
         with col7:
-            st.subheader("Select Vector DB")
+            st.subheader("Select Platform")
             st.write("")
         with col9:
-            vAR_vector_db = st.selectbox("Select Vector DB",("Chroma","Pinecone","Weaviate","Qdrant","Milvus","Opensearch"))
+            vAR_platform = st.selectbox("Select Platform",("Assistant(OpenAI)","Assistant(Azure OpenAI)","AWS Bedrock"))
             st.write("")
 
-        vAR_user_input = Conversation(vAR_model)
+        vAR_response,px_client, phoenix_df = Conversation(vAR_knowledge_base)
 
-        col31,col32,col33 = st.columns([2,3,2])
+        # col31,col32,col33 = st.columns([2,3,2])
 
-        with col32:
-            vAR_function = st.radio("Select Functionality",["Observability","Evaluation"],horizontal=True)
-        if vAR_function=="Observability":
-            LLM_RAG_Tracing(vAR_function,vAR_user_input,vAR_model)
-            pass
-        else:
-            pass
-        col34,col35,col36,col37,col38 = st.columns([1,5,1,5,1])
-        col39,col40,col41 = st.columns([1,5,1])
-        if vAR_function=="Evaluation":
-            with col35:
-                st.subheader("Select Metrics")
-            with col37:
-                selected_metrics = st.multiselect("Select metrics",["All","Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"])
-                if "All" in selected_metrics:
-                    selected_metrics = ["Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"]
-            with col40:
-                st.write("")
-                st.write("")
-                with st.expander("Evaluation Metrics Definition"):
-                    st.write("**Hallucination :** This Eval is specifically designed to detect hallucinations in generated answers from private or retrieved data. The Eval detects if an AI answer to a question is a hallucination based on the reference data used to generate the answer.")
-                    st.write("**QA Correctness :** This Eval evaluates whether a question was correctly answered by the system based on the retrieved data. In contrast to retrieval Evals that are checks on chunks of data returned, this check is a system level check of a correct Q&A.")
-                    st.write("**Retrieval Relevance :** This Eval evaluates whether a retrieved chunk contains an answer to the query. It's extremely useful for evaluating retrieval systems.")
-                    st.write("**Context Recall :** Context Recall measures how many of the relevant documents (or pieces of information) were successfully retrieved. It focuses on not missing important results. Higher recall means fewer relevant documents were left out.")
-                    st.write("**Noise Sensitivity :** NoiseSensitivity measures how often a system makes errors by providing incorrect responses when utilizing either relevant or irrelevant retrieved documents. The score ranges from 0 to 1, with lower values indicating better performance.")
+        # with col32:
+        #     vAR_function = st.radio("Select Functionality",["Observability","Evaluation"],horizontal=True)
+        # if vAR_function=="Observability":
+        #     LLM_RAG_Tracing(vAR_function,px_client, phoenix_df)
+        #     pass
+        # else:
+        #     pass
+        # col34,col35,col36,col37,col38 = st.columns([1,5,1,5,1])
+        # col39,col40,col41 = st.columns([1,5,1])
+        # if vAR_function=="Evaluation":
+        #     with col35:
+        #         st.subheader("Select Metrics")
+        #     with col37:
+        #         selected_metrics = st.multiselect("Select metrics",["All","Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"])
+        #         if "All" in selected_metrics:
+        #             selected_metrics = ["Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"]
+        #     with col40:
+        #         st.write("")
+        #         st.write("")
+        #         with st.expander("Evaluation Metrics Definition"):
+        #             st.write("**Hallucination :** This Eval is specifically designed to detect hallucinations in generated answers from private or retrieved data. The Eval detects if an AI answer to a question is a hallucination based on the reference data used to generate the answer.")
+        #             st.write("**QA Correctness :** This Eval evaluates whether a question was correctly answered by the system based on the retrieved data. In contrast to retrieval Evals that are checks on chunks of data returned, this check is a system level check of a correct Q&A.")
+        #             st.write("**Retrieval Relevance :** This Eval evaluates whether a retrieved chunk contains an answer to the query. It's extremely useful for evaluating retrieval systems.")
+        #             st.write("**Context Recall :** Context Recall measures how many of the relevant documents (or pieces of information) were successfully retrieved. It focuses on not missing important results. Higher recall means fewer relevant documents were left out.")
+        #             st.write("**Noise Sensitivity :** NoiseSensitivity measures how often a system makes errors by providing incorrect responses when utilizing either relevant or irrelevant retrieved documents. The score ranges from 0 to 1, with lower values indicating better performance.")
                 
-            if selected_metrics:
-                LLM_RAG_Tracing(vAR_function)
-                st.write("")
+        #     if selected_metrics:
+        #         LLM_RAG_Tracing(vAR_function,px_client, phoenix_df)
+        #         st.write("")
 
 
 
 
 
 
-
-def LLM_RAG_Tracing(vAR_function,vAR_user_input,vAR_model):
+def LLM_RAG_Tracing(vAR_function,px_client, phoenix_df):
     
-    result,px_client,phoenix_df = RAG_Core_Impl(vAR_user_input,vAR_model)
     if vAR_function=="Observability":
         st.write("Tracing/Span Dataframe")
         st.dataframe(phoenix_df)
 
     if vAR_function!="Observability":
-        queries_df = get_qa_with_reference(px_client)
+        # spans = query_spans(px_client)
+        # queries_df = get_qa_with_reference(px_client)
         retrieved_documents_df = get_retrieved_documents(px_client)
 
 
@@ -248,3 +243,73 @@ def LLM_RAG_Tracing(vAR_function,vAR_user_input,vAR_model):
 
         st.write("Retrieval Relevance Score")
         st.dataframe(relevance_eval_df)
+
+
+
+def Bigquery_Insert(thread_id,vAR_user_input,vAR_response,request_id,response_id,model_name):
+    
+    vAR_response = vAR_response.replace("\n","").replace("\"","'")
+    vAR_request_dict = {
+        "THREAD_ID":thread_id,
+        "REQUEST_ID":request_id,
+        "REQUEST_DATE_TIME":datetime.datetime.utcnow(),
+        "PROMPT":vAR_user_input,
+        "MODEL_NAME":model_name,
+        "KNOWLEDGEBASE":"DMV-FAQ.PDF",
+        "CREATED_DT":datetime.datetime.utcnow(),
+        "CREATED_USER":"LLM_USER",
+        "UPDATED_DT":datetime.datetime.utcnow(),
+        "UPDATED_USER":"LLM_USER",
+
+    }
+    vAR_response_dict = {
+        "THREAD_ID":thread_id,
+        "REQUEST_ID":request_id,
+        "RESPONSE_ID":response_id,
+        "REQUEST_DATE_TIME":datetime.datetime.utcnow(),
+        "PROMPT":vAR_user_input,
+        "MODEL_NAME":model_name,
+        "MODEL_RESPONSE":vAR_response,
+        "CREATED_DT":datetime.datetime.utcnow(),
+        "CREATED_USER":"LLM_USER",
+        "UPDATED_DT":datetime.datetime.utcnow(),
+        "UPDATED_USER":"LLM_USER",
+    }
+
+
+
+    client = bigquery.Client(project="elp-2022-352222")
+    request_table = "DMV_RAG_EVALUATION"+'.LLM_REQUEST'
+    response_table = "DMV_RAG_EVALUATION"+'.LLM_RESPONSE'
+
+
+    vAR_request_query = """
+insert into `{}` values("{}",{},"{}","{}","{}","{}","{}","{}","{}","{}")
+
+""".format(request_table,vAR_request_dict["THREAD_ID"],vAR_request_dict["REQUEST_ID"],vAR_request_dict["REQUEST_DATE_TIME"],
+           vAR_request_dict["PROMPT"],vAR_request_dict["MODEL_NAME"],vAR_request_dict["KNOWLEDGEBASE"],vAR_request_dict["CREATED_DT"],vAR_request_dict["CREATED_USER"],vAR_request_dict["UPDATED_DT"],vAR_request_dict["UPDATED_USER"])
+    
+
+    vAR_response_query = """
+insert into `{}` values("{}",{},{},"{}","{}","{}","{}","{}","{}","{}","{}")
+
+""".format(response_table,vAR_response_dict["THREAD_ID"],vAR_response_dict["REQUEST_ID"],vAR_response_dict["RESPONSE_ID"],vAR_response_dict["REQUEST_DATE_TIME"],
+           vAR_response_dict["PROMPT"],vAR_response_dict["MODEL_NAME"],vAR_response_dict["MODEL_RESPONSE"],vAR_response_dict["CREATED_DT"],vAR_response_dict["CREATED_USER"],vAR_response_dict["UPDATED_DT"],vAR_response_dict["UPDATED_USER"])
+    
+    
+    print('Insert request table query - ',vAR_request_query)
+    print('Insert response table query - ',vAR_response_query)
+
+    
+    vAR_job = client.query(vAR_request_query)
+    vAR_job.result()
+    vAR_num_of_inserted_row = vAR_job.num_dml_affected_rows
+    print('Number of rows inserted into request table - ',vAR_num_of_inserted_row)
+
+
+    vAR_job = client.query(vAR_response_query)
+    vAR_job.result()
+    vAR_num_of_inserted_row = vAR_job.num_dml_affected_rows
+    print('Number of rows inserted into response table - ',vAR_num_of_inserted_row)
+
+    print("Records Successfully inserted into bigquery table")
