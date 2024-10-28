@@ -3,6 +3,7 @@ from streamlit_chat import message
 import os
 from src.LLM_source_code.LLM_RAG.LLM_Assistant_Call import  assistant_call
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import  retrieve_generated
+from src.LLM_source_code.LLM_RAG.LLM_VertexAI_Call import generate
 import datetime
 from google.cloud import bigquery
 import concurrent.futures
@@ -28,9 +29,9 @@ def Conversation(vAR_knowledge_base):
     
     # Initialize session state
     if 'history' not in st.session_state:
-        st.session_state.vAR_question_list = []
         st.session_state.vAR_assistant_response_list = []
         st.session_state.vAR_bedrock_response_list = []
+        st.session_state.vAR_vertex_response_list = []
         st.session_state['history'] = []
 
     if 'generated' not in st.session_state:
@@ -57,34 +58,96 @@ def Conversation(vAR_knowledge_base):
 
                 vAR_assistant = executor.submit(assistant_call,vAR_user_input)
                 vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input)
+                vAR_vertex = executor.submit(generate,vAR_user_input)
 
-                vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id = vAR_assistant.result()
+                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id = vAR_assistant.result()
                 vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id = vAR_bedrock.result()
+                vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id = vAR_vertex.result()
 
                 print("vAR_assistant_result - ",vAR_assistant_response)
                 print("vAR_bedrock_result - ",vAR_response_bedrock)
+                print("vAR_vertex_result - ",vAR_response_vertex)
             
 
-
-            st.session_state.vAR_question_list.append(vAR_user_input)
             st.session_state.vAR_assistant_response_list.append(vAR_assistant_response)
             st.session_state.vAR_bedrock_response_list.append(vAR_response_bedrock)
+            st.session_state.vAR_vertex_response_list.append(vAR_response_vertex)
             
-            vAR_final_df = pd.DataFrame({"Question":st.session_state.vAR_question_list,"Assistant Response":st.session_state.vAR_assistant_response_list,"Bedrock Response":st.session_state.vAR_bedrock_response_list})
+            vAR_final_df = pd.DataFrame({"OpenAI":st.session_state.vAR_assistant_response_list,"Bedrock":st.session_state.vAR_bedrock_response_list,"Google":st.session_state.vAR_vertex_response_list})
 
             st.subheader("Conversation Result")
 
-            st.dataframe(vAR_final_df)
+            st.table(vAR_final_df)
+            # st.subheader("Tracing Dataframe")
+            # st.dataframe(vAR_assistant_phoenix_df)
+
+
+            # queries_df = get_qa_with_reference(px_client)
+            # retrieved_documents_df = get_retrieved_documents(px_client)
+
+
+            eval_model = OpenAIModel()
+                
+            hallucination_evaluator = HallucinationEvaluator(eval_model)
+            qa_correctness_evaluator = QAEvaluator(eval_model)
+            relevance_evaluator = RelevanceEvaluator(eval_model)
+
+            
+            vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id),("Claude",vAR_response_bedrock,bedrock_thread_id),("Gemini",vAR_response_vertex,vertex_thread_id)]
+            vAR_eval_df_list = []
+            vAR_eval_df_list2 = []
+            for item in vAR_responses:
+                queries_df = pd.DataFrame({"input":[vAR_user_input],"output":[item[1]],"reference":[item[1]]})
+                retrieved_documents_df = pd.DataFrame({"input":[vAR_user_input],"reference":[item[1]]})
+                
+                # Generation Evaluation
+                hallucination_eval_df, qa_correctness_eval_df = run_evals(
+                    dataframe=queries_df,
+                    evaluators=[hallucination_evaluator, qa_correctness_evaluator],
+                    provide_explanation=True,
+                )
+
+                # Retrieval Evaluation
+                relevance_eval_df = run_evals(
+                    dataframe=retrieved_documents_df,
+                    evaluators=[relevance_evaluator],
+                    provide_explanation=True,
+                )[0]
+
+
+                # Concatenate the DataFrames
+                merged_df = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
+                merged_df["Model"] = item[0]
+                vAR_eval_df_list.append(merged_df)
+
+                merged_df2 = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
+                merged_df2["MODEL_NAME"] = item[0]
+                merged_df2["MODEL_RESPONSE"] = item[1]
+                merged_df2["REQUEST_ID"] = assistant_request_id
+                merged_df2["RESPONSE_ID"] = assistant_response_id
+                merged_df2["THREAD_ID"] = item[2]
+                merged_df2["PROMPT"] = vAR_user_input
+                vAR_eval_df_list2.append(merged_df2)
+
+            vAR_final_eval_df = pd.concat(vAR_eval_df_list,ignore_index=True)
+            vAR_final_eval_df2 = pd.concat(vAR_eval_df_list2,ignore_index=True)
+            st.subheader("Generation & Retrieval Evaluations")
+            st.table(vAR_final_eval_df)
+
+
+            
+            
 
             # Bigquery Insert
             Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
             Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
-
+            Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
+            # Eval Insertion
+            Bigquery_Eval_Insert(vAR_final_eval_df2)
 
-            
             st.session_state['past'].append(vAR_user_input)
-            st.session_state['generated'].append(vAR_assistant_response)
+            st.session_state['generated'].append(vAR_response_bedrock)
             
 
         if st.session_state['generated']:
@@ -313,3 +376,31 @@ insert into `{}` values("{}",{},{},"{}","{}","{}","{}","{}","{}","{}","{}")
     print('Number of rows inserted into response table - ',vAR_num_of_inserted_row)
 
     print("Records Successfully inserted into bigquery table")
+
+
+def Bigquery_Eval_Insert(vAR_eval_df):
+    vAR_eval_df.rename(columns={'label': 'EVALUATION_PARAM', 'score': 'EVALUATION_PARAM_VALUE','explanation':'EVALUATION_EXPLANATION'}, inplace=True)
+    vAR_eval_df['EVALUATION_PARAM_VALUE'] = vAR_eval_df['EVALUATION_PARAM_VALUE'].astype("string")
+    vAR_eval_df["EVALUATION_ID"] = vAR_eval_df["REQUEST_ID"]
+    vAR_eval_df["EVALUATION_DATE_TIME"] = len(vAR_eval_df)*[datetime.datetime.utcnow()]
+    vAR_eval_df["CREATED_DT"] = len(vAR_eval_df)*[datetime.datetime.utcnow()]
+    vAR_eval_df["UPDATED_DT"] = len(vAR_eval_df)*[datetime.datetime.utcnow()]
+    vAR_eval_df["CREATED_USER"] = len(vAR_eval_df)*["LLM_USER"]
+    vAR_eval_df["UPDATED_USER"] = len(vAR_eval_df)*["LLM_USER"]
+
+    client = bigquery.Client(project="elp-2022-352222")
+
+    table = "DMV_RAG_EVALUATION"+'.'+'LLM_EVALUATION'
+    job_config = bigquery.LoadJobConfig(autodetect=True,write_disposition="WRITE_APPEND")
+    # job_config = bigquery.LoadJobConfig(autodetect=True,write_disposition="WRITE_APPEND",source_format=bigquery.SourceFormat.CSV,max_bad_records=vAR_number_of_configuration,allowJaggedRows=True)
+    job = client.load_table_from_dataframe(vAR_eval_df, table,job_config=job_config)
+
+    job.result()  # Wait for the job to complete.
+    table_id = "elp-2022-352222"+'.'+table
+    table = client.get_table(table_id)  # Make an API request.
+    print(
+            "Evaluation Table Loaded {} rows and {} columns to {}".format(
+                table.num_rows, len(table.schema), table_id
+            )
+        )
+   
