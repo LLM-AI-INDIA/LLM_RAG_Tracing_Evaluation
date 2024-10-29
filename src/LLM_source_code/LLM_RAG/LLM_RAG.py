@@ -8,6 +8,7 @@ import datetime
 from google.cloud import bigquery
 import concurrent.futures
 import pandas as pd
+import webbrowser
 
 
 
@@ -75,7 +76,16 @@ def Conversation(vAR_knowledge_base):
             
             vAR_final_df = pd.DataFrame({"OpenAI":st.session_state.vAR_assistant_response_list,"Bedrock":st.session_state.vAR_bedrock_response_list,"Google":st.session_state.vAR_vertex_response_list})
 
-            st.subheader("Conversation Result")
+            st.write("")
+            col1,col2,col3,col4 = st.columns([3,0.5,5,1])
+            with col1:
+                st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
+            with col3:
+                st.button("Report View",key="response_button",on_click=open_report_link)
+
+            # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
+            
+            # vAR_final_df.style.hide(axis="index")
 
             st.table(vAR_final_df)
             # st.subheader("Tracing Dataframe")
@@ -114,10 +124,16 @@ def Conversation(vAR_knowledge_base):
                     provide_explanation=True,
                 )[0]
 
-
+                hallucination_eval_df["Metrics Category"] = "Generation"
+                qa_correctness_eval_df["Metrics Category"] = "Generation"
+                relevance_eval_df["Metrics Category"] = "Retrieval"
                 # Concatenate the DataFrames
                 merged_df = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
+                merged_df.rename(columns={'label':'Metrics','score':'Score','explanation':'Explanation'},inplace=True)
+                
                 merged_df["Model"] = item[0]
+
+                merged_df = merged_df.reindex(['Model','Metrics Category','Metrics','Score','Explanation'], axis=1)
                 vAR_eval_df_list.append(merged_df)
 
                 merged_df2 = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
@@ -130,8 +146,18 @@ def Conversation(vAR_knowledge_base):
                 vAR_eval_df_list2.append(merged_df2)
 
             vAR_final_eval_df = pd.concat(vAR_eval_df_list,ignore_index=True)
+            # vAR_final_eval_df = vAR_final_eval_df.reset_index().rename(columns={'index': '#'})
+            # vAR_final_eval_df.style.hide(axis="index")
+
             vAR_final_eval_df2 = pd.concat(vAR_eval_df_list2,ignore_index=True)
-            st.subheader("Generation & Retrieval Evaluations")
+
+            st.write("")
+            col1,col2,col3,col4 = st.columns([6,0.5,5,1])
+            with col1:
+                st.markdown("<h3 style='font-size:18px;'>Generation & Retrieval Evaluation Metrics</h3>", unsafe_allow_html=True)
+            with col3:
+                st.button("Report View",key="eval_button",on_click=open_report_link)
+
             st.table(vAR_final_eval_df)
 
 
@@ -148,7 +174,48 @@ def Conversation(vAR_knowledge_base):
 
             st.session_state['past'].append(vAR_user_input)
             st.session_state['generated'].append(vAR_response_bedrock)
+        
+        # Thumbs color changes
+        custom_css = """
+    <style>
+    """
+        for i in range(1,52):
             
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-1wjrxcu.e1f1d6gn4 > div > div > button:nth-child(1) > span > span"""
+            # Add a comma unless it's the last iteration
+            if i < 50:
+                custom_css += ",\n"
+            elif i>50:
+                custom_css+="\n"
+
+        custom_css += """{
+    color: green !important;
+    font-size: x-large !important;
+}
+"""
+
+        # Loop again for button:nth-child(2)
+        for i in range(1, 52):
+            # Append the CSS selectors for button:nth-child(2)
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-1wjrxcu.e1f1d6gn4 > div > div > button:nth-child(2) > span > span"""
+            
+            # Add a comma unless it's the last iteration
+            if i < 50:
+                custom_css += ",\n"
+            elif i>50:
+                custom_css+="\n"
+
+        # Start the CSS rule for button:nth-child(2)
+        custom_css += """{
+            color: red !important;
+            font-size: x-large !important;
+            padding: 10px;
+        }
+        </style>"""
+
+        print("custom_css - ",custom_css)
+        st.markdown(custom_css,unsafe_allow_html=True)
+
 
         if st.session_state['generated']:
             with response_container:
@@ -186,17 +253,18 @@ def LLM_RAG_Impl():
     vAR_knowledge_base = None
 
     with col2:
-        st.subheader("Select Use Case")
         st.write("")
+        st.markdown("<h3 style='font-size:18px;'>Select Use Case</h3>", unsafe_allow_html=True)
     with col4:
-        vAR_usecase = st.selectbox("Select Usecase",("Policy Guru","Multimodal RAG"))
+        vAR_usecase = st.selectbox(" ",("Policy Guru","Multimodal RAG"))
         st.write("")
 
     if vAR_usecase=="Policy Guru":
         with col22:
-            st.subheader("Upload Knowledge Base")
+            st.write("")
+            st.markdown("<h3 style='font-size:18px;'>Upload Knowledge Base</h3>", unsafe_allow_html=True)
         with col24:
-            vAR_knowledge_base = st.file_uploader("Choose any type of file",accept_multiple_files=True)
+            vAR_knowledge_base = st.file_uploader(" ",accept_multiple_files=True)
             
             
             
@@ -205,17 +273,17 @@ def LLM_RAG_Impl():
         with open("DMV-FAQ.pdf", mode='wb') as w:
             w.write(vAR_knowledge_base[0].getvalue())
         with col17:
-            st.subheader("Select LLM")
             st.write("")
+            st.markdown("<h3 style='font-size:18px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
-            vAR_model = st.selectbox("Select LLM",("gpt-4o","gpt-4o-mini","gpt-3.5","claude-3.5-sonnet","llama3"))
+            vAR_model = st.selectbox(" ",("All","gpt-4o","gpt-4o-mini","gpt-3.5","claude-3.5-sonnet","llama3","gemini-1.5"))
             st.write("")
 
         with col7:
-            st.subheader("Select Platform")
             st.write("")
+            st.markdown("<h3 style='font-size:18px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
-            vAR_platform = st.selectbox("Select Platform",("Assistant(OpenAI)","Assistant(Azure OpenAI)","AWS Bedrock"))
+            vAR_platform = st.selectbox(" ",("All","Assistant(OpenAI)","Assistant(Azure OpenAI)","AWS Bedrock","Vertex AI(Gemini)"))
             st.write("")
 
         vAR_response,px_client, phoenix_df = Conversation(vAR_knowledge_base)
@@ -379,7 +447,7 @@ insert into `{}` values("{}",{},{},"{}","{}","{}","{}","{}","{}","{}","{}")
 
 
 def Bigquery_Eval_Insert(vAR_eval_df):
-    vAR_eval_df.rename(columns={'label': 'EVALUATION_PARAM', 'score': 'EVALUATION_PARAM_VALUE','explanation':'EVALUATION_EXPLANATION'}, inplace=True)
+    vAR_eval_df.rename(columns={'label': 'EVALUATION_PARAM', 'score': 'EVALUATION_PARAM_VALUE','explanation':'EVALUATION_EXPLANATION','Metrics Category':'METRICS_CATEGORY'}, inplace=True)
     vAR_eval_df['EVALUATION_PARAM_VALUE'] = vAR_eval_df['EVALUATION_PARAM_VALUE'].astype("string")
     vAR_eval_df["EVALUATION_ID"] = vAR_eval_df["REQUEST_ID"]
     vAR_eval_df["EVALUATION_DATE_TIME"] = len(vAR_eval_df)*[datetime.datetime.utcnow()]
@@ -404,3 +472,7 @@ def Bigquery_Eval_Insert(vAR_eval_df):
             )
         )
    
+
+def open_report_link():
+    report_link = "https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee"
+    webbrowser.open(report_link)
