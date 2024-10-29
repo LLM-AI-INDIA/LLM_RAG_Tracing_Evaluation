@@ -81,7 +81,8 @@ def Conversation(vAR_knowledge_base):
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
             with col3:
-                st.button("Report View",key="response_button",on_click=open_report_link)
+                # st.button("Report View",key="response_button",on_click=open_report_link)
+                st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
             # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
             
@@ -156,7 +157,7 @@ def Conversation(vAR_knowledge_base):
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>Generation & Retrieval Evaluation Metrics</h3>", unsafe_allow_html=True)
             with col3:
-                st.button("Report View",key="eval_button",on_click=open_report_link)
+                st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
 
             st.table(vAR_final_eval_df)
 
