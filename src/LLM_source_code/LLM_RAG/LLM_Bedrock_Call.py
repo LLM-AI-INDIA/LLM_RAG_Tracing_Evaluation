@@ -24,8 +24,7 @@ def retrieve_generated(input):
     response = client.retrieve_and_generate(
         input={"text":input},
         retrieveAndGenerateConfiguration={
-            
-            "type":"KNOWLEDGE_BASE","knowledgeBaseConfiguration":{"knowledgeBaseId":os.environ["KNOWLEDGEBASE_ID"],"modelArn":os.environ["MODEL_ARN"],"retrievalConfiguration":{"vectorSearchConfiguration":{"numberOfResults":5}},"generationConfiguration":{"inferenceConfig":{"textInferenceConfig":{"temperature":0,"topP":1,"maxTokens":2048,"stopSequences":["\nObservation"]}}}}
+            "type":"KNOWLEDGE_BASE","knowledgeBaseConfiguration":{"knowledgeBaseId":os.environ["KNOWLEDGEBASE_ID"],"modelArn":os.environ["MODEL_ARN"],"retrievalConfiguration":{"vectorSearchConfiguration":{"numberOfResults":5}},"generationConfiguration":{"inferenceConfig":{"textInferenceConfig":{"temperature":0,"topP":1,"maxTokens":2048,"stopSequences":["\nObservation"]}},"guardrailConfiguration":{"guardrailId":os.environ["GUARDRAIL_ID"],"guardrailVersion":"DRAFT"}}}
         }
     )
 

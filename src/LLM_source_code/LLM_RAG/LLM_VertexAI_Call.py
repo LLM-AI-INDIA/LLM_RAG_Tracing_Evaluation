@@ -28,19 +28,19 @@ def generate(input):
     safety_settings = [
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold=SafetySetting.HarmBlockThreshold.OFF
+            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold=SafetySetting.HarmBlockThreshold.OFF
+            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold=SafetySetting.HarmBlockThreshold.OFF
+            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold=SafetySetting.HarmBlockThreshold.OFF
+            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
         ),
     ]
 

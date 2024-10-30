@@ -77,11 +77,10 @@ def Conversation(vAR_knowledge_base):
             vAR_final_df = pd.DataFrame({"OpenAI":st.session_state.vAR_assistant_response_list,"Bedrock":st.session_state.vAR_bedrock_response_list,"Google":st.session_state.vAR_vertex_response_list})
 
             st.write("")
-            col1,col2,col3,col4 = st.columns([3,0.5,5,1])
+            col1,col2,col3,col4 = st.columns([5.5,2,5,1])
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
-            with col3:
-                # st.button("Report View",key="response_button",on_click=open_report_link)
+            with col2:
                 st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
             # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
@@ -153,10 +152,10 @@ def Conversation(vAR_knowledge_base):
             vAR_final_eval_df2 = pd.concat(vAR_eval_df_list2,ignore_index=True)
 
             st.write("")
-            col1,col2,col3,col4 = st.columns([6,0.5,5,1])
+            col1,col2,col3,col4 = st.columns([5.5,2,5,1])
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>Generation & Retrieval Evaluation Metrics</h3>", unsafe_allow_html=True)
-            with col3:
+            with col2:
                 st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
 
             st.table(vAR_final_eval_df)
@@ -165,13 +164,13 @@ def Conversation(vAR_knowledge_base):
             
             
 
-            # Bigquery Insert
-            Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
-            Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
-            Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
+            # # Bigquery Insert
+            # Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            # Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
+            # Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
-            # Eval Insertion
-            Bigquery_Eval_Insert(vAR_final_eval_df2)
+            # # Eval Insertion
+            # Bigquery_Eval_Insert(vAR_final_eval_df2)
 
             st.session_state['past'].append(vAR_user_input)
             st.session_state['generated'].append(vAR_response_bedrock)
@@ -181,8 +180,8 @@ def Conversation(vAR_knowledge_base):
     <style>
     """
         for i in range(1,52):
-            
-            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-1wjrxcu.e1f1d6gn4 > div > div > button:nth-child(1) > span > span"""
+                          
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-9p65df.e1f1d6gn4 > div > div > button:nth-child(1) > span > span"""
             # Add a comma unless it's the last iteration
             if i < 50:
                 custom_css += ",\n"
@@ -198,7 +197,8 @@ def Conversation(vAR_knowledge_base):
         # Loop again for button:nth-child(2)
         for i in range(1, 52):
             # Append the CSS selectors for button:nth-child(2)
-            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-1wjrxcu.e1f1d6gn4 > div > div > button:nth-child(2) > span > span"""
+                          
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-9p65df.e1f1d6gn4 > div > div > button:nth-child(2) > span > span"""
             
             # Add a comma unless it's the last iteration
             if i < 50:
