@@ -21,6 +21,7 @@ from phoenix.evals import (
     run_evals,
 )
 from phoenix.session.evaluation import get_qa_with_reference, get_retrieved_documents
+from src.LLM_source_code.LLM_RAG.LLM_Custom_Eval import Custom_Eval_Context_Precision,Custom_Eval_Context_Recall
 
 
 
@@ -124,11 +125,24 @@ def Conversation(vAR_knowledge_base):
                     provide_explanation=True,
                 )[0]
 
+                try:
+
+                    context_precision_eval_df = Custom_Eval_Context_Precision(queries_df)
+                    context_recall_eval_df = Custom_Eval_Context_Recall(queries_df)
+                
+                except BaseException as e:
+                    vAR_err = str(e)
+                    st.error("Error in Custom Evaluation - "+vAR_err)
+                    print("Error in Custom Evaluation - "+vAR_err)
+
                 hallucination_eval_df["Metrics Category"] = "Generation"
                 qa_correctness_eval_df["Metrics Category"] = "Generation"
                 relevance_eval_df["Metrics Category"] = "Retrieval"
+                context_precision_eval_df["Metrics Category"] = "Retrieval"
+                context_recall_eval_df["Metrics Category"] = "Retrieval"
+
                 # Concatenate the DataFrames
-                merged_df = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
+                merged_df = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df,context_precision_eval_df,context_recall_eval_df], ignore_index=True)
                 merged_df.rename(columns={'label':'Metrics','score':'Score','explanation':'Explanation'},inplace=True)
                 
                 merged_df["Model"] = item[0]
@@ -136,7 +150,7 @@ def Conversation(vAR_knowledge_base):
                 merged_df = merged_df.reindex(['Model','Metrics Category','Metrics','Score','Explanation'], axis=1)
                 vAR_eval_df_list.append(merged_df)
 
-                merged_df2 = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df], ignore_index=True)
+                merged_df2 = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df,context_precision_eval_df,context_recall_eval_df], ignore_index=True)
                 merged_df2["MODEL_NAME"] = item[0]
                 merged_df2["MODEL_RESPONSE"] = item[1]
                 merged_df2["REQUEST_ID"] = assistant_request_id
@@ -164,13 +178,13 @@ def Conversation(vAR_knowledge_base):
             
             
 
-            # # Bigquery Insert
-            # Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
-            # Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
-            # Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
+            # Bigquery Insert
+            Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
+            Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
             # # Eval Insertion
-            # Bigquery_Eval_Insert(vAR_final_eval_df2)
+            Bigquery_Eval_Insert(vAR_final_eval_df2)
 
             st.session_state['past'].append(vAR_user_input)
             st.session_state['generated'].append(vAR_response_bedrock)

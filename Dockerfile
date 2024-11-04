@@ -13,6 +13,10 @@ COPY . ./
 # Install production dependencies.
 RUN pip install -r requirements.txt
 
+RUN pip install opentelemetry-sdk==1.24.0
+RUN pip install opentelemetry-semantic-conventions==0.48b0
+RUN pip install opentelemetry-api==1.24.0
+
 
 
 # Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
