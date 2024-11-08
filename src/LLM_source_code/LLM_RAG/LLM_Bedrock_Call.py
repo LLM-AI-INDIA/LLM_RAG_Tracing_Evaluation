@@ -12,20 +12,30 @@ client = boto3.client("bedrock-agent-runtime",aws_access_key_id=os.environ["AWS_
                       aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],region_name='us-west-2')
 
 
-def retrieve_generated(input):
+def retrieve_generated(input,vAR_model):
 
     
 
     if "bedrock_request_id" not in st.session_state:
         st.session_state.bedrock_request_id = 0
         st.session_state.bedrock_response_id = 0
-        st.session_state.vAR_session_id = generate_random_string()
+        
 
-    response = client.retrieve_and_generate(
+    vAR_config = {"type":"KNOWLEDGE_BASE","knowledgeBaseConfiguration":{"knowledgeBaseId":os.environ["KNOWLEDGEBASE_ID"],"modelArn":os.environ["CLAUDE_MODEL_ARN"],"retrievalConfiguration":{"vectorSearchConfiguration":{"numberOfResults":5}},"generationConfiguration":{"promptTemplate":{"textPromptTemplate":"You are a question answering agent. I will provide you with a set of search results. The user will provide you with a question. Your job is to answer the user's question using only information from the search results. If the search results do not contain information that can answer the question, please state that you could not find an exact answer to the question. \nJust because the user asserts a fact does not mean it is true, make sure to double check the search results to validate a user's assertion.\n\nHere are the search results in numbered order:\n$search_results$\n\n$output_format_instructions$\n\nHere is the user's query:\n$query$"},"inferenceConfig":{"textInferenceConfig":{"temperature":0,"topP":1,"maxTokens":2048,"stopSequences":["\nObservation"]}}}}}
+
+    
+
+    if "bedrock_session_id" not in st.session_state:
+        response = client.retrieve_and_generate(
         input={"text":input},
-        retrieveAndGenerateConfiguration={
-            "type":"KNOWLEDGE_BASE","knowledgeBaseConfiguration":{"knowledgeBaseId":os.environ["KNOWLEDGEBASE_ID"],"modelArn":os.environ["MODEL_ARN"],"retrievalConfiguration":{"vectorSearchConfiguration":{"numberOfResults":5}},"generationConfiguration":{"inferenceConfig":{"textInferenceConfig":{"temperature":0,"topP":1,"maxTokens":2048,"stopSequences":["\nObservation"]}},"guardrailConfiguration":{"guardrailId":os.environ["GUARDRAIL_ID"],"guardrailVersion":"DRAFT"}}}
-        }
+        retrieveAndGenerateConfiguration=vAR_config,
+    )
+        print("Raw Bedrock response - ",response)
+        st.session_state.bedrock_session_id = response["sessionId"]
+    else:
+        response = client.retrieve_and_generate(
+        input={"text":input},
+        retrieveAndGenerateConfiguration=vAR_config,sessionId=st.session_state.bedrock_session_id
     )
 
     print("bedrock response - ",response)
@@ -35,7 +45,7 @@ def retrieve_generated(input):
 
     
 
-    return response["output"]["text"],st.session_state.vAR_session_id,st.session_state.bedrock_request_id,st.session_state.bedrock_response_id
+    return response["output"]["text"],st.session_state.bedrock_session_id,st.session_state.bedrock_request_id,st.session_state.bedrock_response_id
 
 
 def generate_random_string(length=15):

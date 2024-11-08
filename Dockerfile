@@ -19,5 +19,6 @@ RUN pip install opentelemetry-api==1.24.0
 
 
 
+
 # Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
 CMD streamlit run --server.port 8080 --server.enableCORS false app.py

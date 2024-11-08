@@ -9,6 +9,7 @@ from google.cloud import bigquery
 import concurrent.futures
 import pandas as pd
 import webbrowser
+import traceback
 
 
 
@@ -27,7 +28,7 @@ from src.LLM_source_code.LLM_RAG.LLM_Custom_Eval import Custom_Eval_Context_Prec
 
 
 
-def Conversation(vAR_knowledge_base):
+def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
     
     # Initialize session state
     if 'history' not in st.session_state:
@@ -57,9 +58,8 @@ def Conversation(vAR_knowledge_base):
         if submit_button and vAR_user_input and vAR_user_input!='':
             # Generate response from the agent
             with concurrent.futures.ThreadPoolExecutor() as executor:
-
-                vAR_assistant = executor.submit(assistant_call,vAR_user_input)
-                vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input)
+                vAR_assistant = executor.submit(assistant_call,vAR_user_input,vAR_model)
+                vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input,vAR_model)
                 vAR_vertex = executor.submit(generate,vAR_user_input)
 
                 px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id = vAR_assistant.result()
@@ -97,7 +97,11 @@ def Conversation(vAR_knowledge_base):
             # retrieved_documents_df = get_retrieved_documents(px_client)
 
 
-            eval_model = OpenAIModel()
+            eval_model = OpenAIModel(
+                model="gpt-4o",
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version="2024-05-01-preview",
+            )
                 
             hallucination_evaluator = HallucinationEvaluator(eval_model)
             qa_correctness_evaluator = QAEvaluator(eval_model)
@@ -133,6 +137,7 @@ def Conversation(vAR_knowledge_base):
                 except BaseException as e:
                     vAR_err = str(e)
                     st.error("Error in Custom Evaluation - "+vAR_err)
+                    print(traceback.format_exc())
                     print("Error in Custom Evaluation - "+vAR_err)
 
                 hallucination_eval_df["Metrics Category"] = "Generation"
@@ -228,7 +233,6 @@ def Conversation(vAR_knowledge_base):
         }
         </style>"""
 
-        print("custom_css - ",custom_css)
         st.markdown(custom_css,unsafe_allow_html=True)
 
 
@@ -291,17 +295,27 @@ def LLM_RAG_Impl():
             st.write("")
             st.markdown("<h3 style='font-size:18px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
-            vAR_model = st.selectbox(" ",("All","gpt-4o","gpt-4o-mini","gpt-3.5","claude-3.5-sonnet","llama3","gemini-1.5"))
+            vAR_model = st.selectbox(" ",("All","gpt-4o(Azure OpenAI)","gpt-4(Azure OpenAI)","claude-3.5-sonnet(Bedrock)","gemini-1.5(Vertex AI)"))
             st.write("")
 
         with col7:
             st.write("")
             st.markdown("<h3 style='font-size:18px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
-            vAR_platform = st.selectbox(" ",("All","Assistant(OpenAI)","Assistant(Azure OpenAI)","AWS Bedrock","Vertex AI(Gemini)"))
-            st.write("")
+            if vAR_model=="All":
+                vAR_platform = st.selectbox(" ",("All","Assistant(Azure OpenAI)","AWS Bedrock","Vertex AI(Gemini)"))
+                st.write("")
+            elif vAR_model=="gpt-4o(Azure OpenAI)" or vAR_model=="gpt-4(Azure OpenAI)":
+                vAR_platform = st.selectbox(" ",("Assistant(Azure OpenAI)"))
+                st.write("")
+            elif vAR_model=="claude-3.5-sonnet(Bedrock)":
+                vAR_platform = st.selectbox(" ",("AWS Bedrock"))
+                st.write("")
+            elif vAR_model=="gemini-1.5(Vertex AI)":
+                vAR_platform = st.selectbox(" ",("Vertex AI(Gemini)"))
+                st.write("")
 
-        vAR_response,px_client, phoenix_df = Conversation(vAR_knowledge_base)
+        vAR_response,px_client, phoenix_df = Conversation(vAR_knowledge_base,vAR_model,vAR_platform)
 
         # col31,col32,col33 = st.columns([2,3,2])
 

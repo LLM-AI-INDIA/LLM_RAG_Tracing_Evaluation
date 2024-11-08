@@ -28,19 +28,19 @@ def generate(input):
     safety_settings = [
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
         SafetySetting(
             category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold=SafetySetting.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
     ]
 
@@ -55,8 +55,10 @@ def generate(input):
         stream=True,
     )
 
+    
     result = ""
     for response in responses:
+        print("Vertext AI Raw response - ",response)
         result = result+response.text
 
     print("Vertext result in generate - ",result)

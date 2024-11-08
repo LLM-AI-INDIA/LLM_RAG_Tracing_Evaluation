@@ -13,3 +13,4 @@ google-cloud-bigquery
 google-cloud-aiplatform
 openinference-instrumentation-bedrock
 deepeval==1.4.6
+lm-format-enforcer

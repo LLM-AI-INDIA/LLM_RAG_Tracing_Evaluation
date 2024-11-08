@@ -1,24 +1,38 @@
 import pandas as pd
-from deepeval.metrics import ContextualPrecisionMetric
+from deepeval.metrics import ContextualPrecisionMetric,AnswerRelevancyMetric
 from deepeval.test_case import LLMTestCase
 from deepeval.metrics import ContextualRecallMetric
+# from langchain_openai import AzureOpenAI
+import os
+# from src.LLM_source_code.LLM_RAG.LLM_DeepEvalBaseLLM import AzureOpenAIClass
+
+# custom_model = AzureOpenAI(
+#     openai_api_version="2023-03-15-preview",
+#     azure_deployment="GPT-35-DEV-Deployment",
+#     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+#     openai_api_key=os.environ["AZURE_OPENAI_API_KEY"],
+#     max_tokens=7000,
+# )
+
+# azure_openai = AzureOpenAIClass(model=custom_model)
 
 
 def Custom_Eval_Context_Precision(queries_df):
+
+    
     # Initialize the metric
     metric = ContextualPrecisionMetric(
         threshold=0.7,
-        model="gpt-4o",
-        include_reason=True
+        include_reason=True,
+        model="gpt-4o"
     )
 
-    
     # Prepare test cases
     test_cases = []
     for _, query_row in queries_df.iterrows():
 
         # Filter retrieved documents with the same input text
-        retrieval_context = list(query_row['reference'])  # Collect all relevant references
+        retrieval_context = [query_row['reference']]  # Collect all relevant references
 
         # Create test case
         test_case = LLMTestCase(
@@ -33,7 +47,8 @@ def Custom_Eval_Context_Precision(queries_df):
     scores = []
     reasons = []
     for test_case in test_cases:
-        metric.measure(test_case)
+        result = metric.measure(test_case)
+        print("cprecision result - ",metric)
         scores.append(metric.score)
         reasons.append(metric.reason)
 
@@ -53,8 +68,8 @@ def Custom_Eval_Context_Recall(queries_df):
     # Initialize the metric
     recall_metric = ContextualRecallMetric(
         threshold=0.7,
-        model="gpt-4o",
-        include_reason=True
+        include_reason=True,
+        model="gpt-4o"
     )
 
     
@@ -64,11 +79,9 @@ def Custom_Eval_Context_Recall(queries_df):
 
     # Loop through each row in queries_df to measure Contextual Recall
     for _, query_row in queries_df.iterrows():
-        # Get the input to use as the key for matching rows in retrieved_documents_df
-        input_text = query_row['input']
 
         # Filter retrieved documents with the same input text
-        retrieval_context = list(query_row['reference'])  # Collect all relevant references
+        retrieval_context = [query_row['reference']]  # Collect all relevant references
 
         # Create the test case for Contextual Recall
         test_case = LLMTestCase(
@@ -79,7 +92,8 @@ def Custom_Eval_Context_Recall(queries_df):
         )
 
         # Measure the recall and store results
-        recall_metric.measure(test_case)
+        result = recall_metric.measure(test_case)
+        print("crecall result - ",recall_metric)
         recall_scores.append(recall_metric.score)
         recall_reasons.append(recall_metric.reason)
 
