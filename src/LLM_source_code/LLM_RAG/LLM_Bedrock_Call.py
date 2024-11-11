@@ -43,9 +43,14 @@ def retrieve_generated(input,vAR_model):
     st.session_state.bedrock_request_id = st.session_state.bedrock_response_id+1
     st.session_state.bedrock_response_id = st.session_state.bedrock_response_id+2
 
+    vAR_retrieved_text = ""
+    for item in response["citations"]:
+        if len(item.get("retrievedReferences"))>0:
+            vAR_retrieved_text += item.get("retrievedReferences")[0]["content"]["text"]
     
+    print("vAR_retrieved_text - ",vAR_retrieved_text)
 
-    return response["output"]["text"],st.session_state.bedrock_session_id,st.session_state.bedrock_request_id,st.session_state.bedrock_response_id
+    return response["output"]["text"],st.session_state.bedrock_session_id,st.session_state.bedrock_request_id,st.session_state.bedrock_response_id,vAR_retrieved_text
 
 
 def generate_random_string(length=15):

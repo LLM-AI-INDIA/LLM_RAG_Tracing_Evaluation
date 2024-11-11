@@ -79,7 +79,26 @@ api_version="2024-05-01-preview"
         assistant_id=os.environ["ASSISTANT_ID"],model="Assistant-Model",
     )
         print("Azure GPT4 called")
+
+    vAR_retrieved_text = ""
     
+    
+    # my_thread = client.beta.threads.retrieve(st.session_state.thread.id)
+    # print("my_thread - ",my_thread)
+
+    # Fetch the thread messages using the client
+    # thread_messages = client.beta.threads.messages.list(st.session_state.thread.id)
+
+
+    # # Check if data exists and write to a text file
+    # if thread_messages and hasattr(thread_messages, 'data'):
+    #     with open("thread_messages.txt", "w",encoding="utf-8") as file:
+    #         for message in thread_messages.data:
+    #             file.write(str(message))
+    #     print("Messages have been written to thread_messages.txt")
+    # else:
+    #     print("No messages found in the thread.")
+
     st.session_state.request_id = st.session_state.response_id+1
     st.session_state.response_id = st.session_state.response_id+2
 
@@ -104,7 +123,7 @@ api_version="2024-05-01-preview"
             phoenix_df = px_client.get_spans_dataframe(timeout=None)
 
 #                 
-            return px_client,phoenix_df,content,st.session_state.thread.id,st.session_state.request_id,st.session_state.response_id
+            return px_client,phoenix_df,content,st.session_state.thread.id,st.session_state.request_id,st.session_state.response_id,vAR_retrieved_text
     elif run.status == 'requires_action':
         # the assistant requires calling some functions
         # and submit the tool outputs back to the run

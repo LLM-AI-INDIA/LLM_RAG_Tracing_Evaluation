@@ -14,6 +14,7 @@ if __name__=='__main__':
             </style>
             """
     st.markdown(vAR_hide_footer, unsafe_allow_html=True)
+    
     # Applying CSS properties for web page
     CSS_Property("src/LLM_Utility/LLM_style.css")
     # Initializing Basic Componentes of Web Page

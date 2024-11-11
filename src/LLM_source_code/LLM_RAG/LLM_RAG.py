@@ -10,6 +10,10 @@ import concurrent.futures
 import pandas as pd
 import webbrowser
 import traceback
+from src.LLM_source_code.LLM_RAG.LLM_Evaluation import process_response
+import multiprocessing as mp
+from functools import partial
+from multiprocessing import Pool
 
 
 
@@ -62,9 +66,9 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                 vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input,vAR_model)
                 vAR_vertex = executor.submit(generate,vAR_user_input)
 
-                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id = vAR_assistant.result()
-                vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id = vAR_bedrock.result()
-                vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id = vAR_vertex.result()
+                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai = vAR_assistant.result()
+                vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id,vAR_retrieved_text_bedrock = vAR_bedrock.result()
+                vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id,vAR_retrieved_text_gemini = vAR_vertex.result()
 
                 print("vAR_assistant_result - ",vAR_assistant_response)
                 print("vAR_bedrock_result - ",vAR_response_bedrock)
@@ -96,7 +100,6 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             # queries_df = get_qa_with_reference(px_client)
             # retrieved_documents_df = get_retrieved_documents(px_client)
 
-
             eval_model = OpenAIModel(
                 model="gpt-4o",
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -106,11 +109,12 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             hallucination_evaluator = HallucinationEvaluator(eval_model)
             qa_correctness_evaluator = QAEvaluator(eval_model)
             relevance_evaluator = RelevanceEvaluator(eval_model)
-
             
-            vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id),("Claude",vAR_response_bedrock,bedrock_thread_id),("Gemini",vAR_response_vertex,vertex_thread_id)]
+            vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id,vAR_assistant_response),("Claude",vAR_response_bedrock,bedrock_thread_id,vAR_retrieved_text_bedrock),("Gemini",vAR_response_vertex,vertex_thread_id,vAR_response_vertex)]
+
             vAR_eval_df_list = []
             vAR_eval_df_list2 = []
+
             for item in vAR_responses:
                 queries_df = pd.DataFrame({"input":[vAR_user_input],"output":[item[1]],"reference":[item[1]]})
                 retrieved_documents_df = pd.DataFrame({"input":[vAR_user_input],"reference":[item[1]]})
@@ -129,16 +133,11 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                     provide_explanation=True,
                 )[0]
 
-                try:
 
-                    context_precision_eval_df = Custom_Eval_Context_Precision(queries_df)
-                    context_recall_eval_df = Custom_Eval_Context_Recall(queries_df)
+                context_precision_eval_df = Custom_Eval_Context_Precision(queries_df)
+                context_recall_eval_df = Custom_Eval_Context_Recall(queries_df)
                 
-                except BaseException as e:
-                    vAR_err = str(e)
-                    st.error("Error in Custom Evaluation - "+vAR_err)
-                    print(traceback.format_exc())
-                    print("Error in Custom Evaluation - "+vAR_err)
+                
 
                 hallucination_eval_df["Metrics Category"] = "Generation"
                 qa_correctness_eval_df["Metrics Category"] = "Generation"
@@ -170,6 +169,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
 
             vAR_final_eval_df2 = pd.concat(vAR_eval_df_list2,ignore_index=True)
 
+
             st.write("")
             col1,col2,col3,col4 = st.columns([5.5,2,5,1])
             with col1:
@@ -184,7 +184,10 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             
 
             # Bigquery Insert
-            Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            if vAR_model=="All" or vAR_model=="gpt-4o(Azure OpenAI)":
+                Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            elif vAR_model=="gpt-4(Azure OpenAI)":
+                Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4")
             Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
             Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
@@ -199,7 +202,6 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
     <style>
     """
         for i in range(1,52):
-                          
             custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-9p65df.e1f1d6gn4 > div > div > button:nth-child(1) > span > span"""
             # Add a comma unless it's the last iteration
             if i < 50:

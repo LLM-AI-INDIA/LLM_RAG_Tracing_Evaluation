@@ -13,7 +13,7 @@ def generate(input):
         st.session_state.vertex_response_id = 0
         st.session_state.vertex_session_id = generate_random_string()
 
-    
+    vAR_retrieved_text = ""
     document1 = Part.from_uri(
         mime_type="application/pdf",
         uri="gs://dmv_elp_project/DMV FAQ.pdf",
@@ -43,10 +43,11 @@ def generate(input):
             threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
     ]
-
+    vAR_system_instruction = """You are a helpful DMV customer support assistant. Your job is to respond to user questions based on document provided. If you don\'t know the answer from the document provided, please respond \"I don\'t find any relevant details in the provided document\". Don\'t try to create answer apart from document provided."""
     vertexai.init(project="elp-2022-352222", location="us-central1")
     model = GenerativeModel(
         "gemini-1.5-flash-002",
+        system_instruction=[vAR_system_instruction]
     )
     responses = model.generate_content(
         [document1, input],
@@ -67,5 +68,5 @@ def generate(input):
     st.session_state.vertex_request_id = st.session_state.vertex_response_id+1
     st.session_state.vertex_response_id = st.session_state.vertex_response_id+2
 
-    return result,st.session_state.vertex_session_id,st.session_state.vertex_request_id,st.session_state.vertex_response_id
+    return result,st.session_state.vertex_session_id,st.session_state.vertex_request_id,st.session_state.vertex_response_id,vAR_retrieved_text
 
