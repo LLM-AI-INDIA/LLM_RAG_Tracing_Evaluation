@@ -69,7 +69,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                 vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input,vAR_model)
                 vAR_vertex = executor.submit(generate,vAR_user_input)
 
-                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai,vAR_run_usage = vAR_assistant.result()
+                vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai,vAR_run_usage = vAR_assistant.result()
                 vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id,vAR_retrieved_text_bedrock = vAR_bedrock.result()
                 vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id,vAR_retrieved_text_gemini = vAR_vertex.result()
 
@@ -240,7 +240,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                             feedback_text = "thumbs up" if feedback == 1 else "thumbs down"
                             feedback_class = "thumbs-up" if feedback == 1 else "thumbs-down"
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
-    return vAR_response,px_client, phoenix_df
+    return vAR_response
 
 
 def LLM_RAG_Impl():
@@ -303,7 +303,7 @@ def LLM_RAG_Impl():
                 vAR_platform = st.selectbox(" ",("Vertex AI(Gemini)"))
                 st.write("")
 
-        vAR_response,px_client, phoenix_df = Conversation(vAR_knowledge_base,vAR_model,vAR_platform)
+        vAR_response = Conversation(vAR_knowledge_base,vAR_model,vAR_platform)
 
         # col31,col32,col33 = st.columns([2,3,2])
 
