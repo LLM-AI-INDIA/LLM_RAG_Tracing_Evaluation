@@ -1,5 +1,8 @@
 import streamlit as st
 from streamlit_chat import message
+import matplotlib.pyplot as plt
+import numpy as np
+import json
 import os
 from src.LLM_source_code.LLM_RAG.LLM_Assistant_Call import  assistant_call
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import  retrieve_generated
@@ -10,7 +13,7 @@ import concurrent.futures
 import pandas as pd
 import webbrowser
 import traceback
-from src.LLM_source_code.LLM_RAG.LLM_Evaluation import process_response
+from src.LLM_source_code.LLM_RAG.LLM_Evaluation import process_single_response
 import multiprocessing as mp
 from functools import partial
 from multiprocessing import Pool
@@ -66,7 +69,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                 vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input,vAR_model)
                 vAR_vertex = executor.submit(generate,vAR_user_input)
 
-                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai = vAR_assistant.result()
+                px_client,vAR_assistant_phoenix_df,vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai,vAR_run_usage = vAR_assistant.result()
                 vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id,vAR_retrieved_text_bedrock = vAR_bedrock.result()
                 vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id,vAR_retrieved_text_gemini = vAR_vertex.result()
 
@@ -93,6 +96,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             # vAR_final_df.style.hide(axis="index")
 
             st.table(vAR_final_df)
+
             # st.subheader("Tracing Dataframe")
             # st.dataframe(vAR_assistant_phoenix_df)
 
@@ -100,68 +104,27 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             # queries_df = get_qa_with_reference(px_client)
             # retrieved_documents_df = get_retrieved_documents(px_client)
 
-            eval_model = OpenAIModel(
-                model="gpt-4o",
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_version="2024-05-01-preview",
-            )
-                
-            hallucination_evaluator = HallucinationEvaluator(eval_model)
-            qa_correctness_evaluator = QAEvaluator(eval_model)
-            relevance_evaluator = RelevanceEvaluator(eval_model)
-            
             vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id,vAR_assistant_response),("Claude",vAR_response_bedrock,bedrock_thread_id,vAR_retrieved_text_bedrock),("Gemini",vAR_response_vertex,vertex_thread_id,vAR_response_vertex)]
-
+            process_func = partial(
+        process_single_response,
+        vAR_user_input=vAR_user_input,
+        assistant_request_id=assistant_request_id,
+        assistant_response_id=assistant_response_id
+    )
+    
+            # Create a pool of workers
+            with Pool(processes=4) as pool:
+                # Map the processing function to all responses
+                results = pool.map(process_func, vAR_responses)
+            
+            # Separate results into two lists
             vAR_eval_df_list = []
             vAR_eval_df_list2 = []
-
-            for item in vAR_responses:
-                queries_df = pd.DataFrame({"input":[vAR_user_input],"output":[item[1]],"reference":[item[1]]})
-                retrieved_documents_df = pd.DataFrame({"input":[vAR_user_input],"reference":[item[1]]})
-                
-                # Generation Evaluation
-                hallucination_eval_df, qa_correctness_eval_df = run_evals(
-                    dataframe=queries_df,
-                    evaluators=[hallucination_evaluator, qa_correctness_evaluator],
-                    provide_explanation=True,
-                )
-
-                # Retrieval Evaluation
-                relevance_eval_df = run_evals(
-                    dataframe=retrieved_documents_df,
-                    evaluators=[relevance_evaluator],
-                    provide_explanation=True,
-                )[0]
-
-
-                context_precision_eval_df = Custom_Eval_Context_Precision(queries_df)
-                context_recall_eval_df = Custom_Eval_Context_Recall(queries_df)
-                
-                
-
-                hallucination_eval_df["Metrics Category"] = "Generation"
-                qa_correctness_eval_df["Metrics Category"] = "Generation"
-                relevance_eval_df["Metrics Category"] = "Retrieval"
-                context_precision_eval_df["Metrics Category"] = "Retrieval"
-                context_recall_eval_df["Metrics Category"] = "Retrieval"
-
-                # Concatenate the DataFrames
-                merged_df = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df,context_precision_eval_df,context_recall_eval_df], ignore_index=True)
-                merged_df.rename(columns={'label':'Metrics','score':'Score','explanation':'Explanation'},inplace=True)
-                
-                merged_df["Model"] = item[0]
-
-                merged_df = merged_df.reindex(['Model','Metrics Category','Metrics','Score','Explanation'], axis=1)
-                vAR_eval_df_list.append(merged_df)
-
-                merged_df2 = pd.concat([hallucination_eval_df, qa_correctness_eval_df, relevance_eval_df,context_precision_eval_df,context_recall_eval_df], ignore_index=True)
-                merged_df2["MODEL_NAME"] = item[0]
-                merged_df2["MODEL_RESPONSE"] = item[1]
-                merged_df2["REQUEST_ID"] = assistant_request_id
-                merged_df2["RESPONSE_ID"] = assistant_response_id
-                merged_df2["THREAD_ID"] = item[2]
-                merged_df2["PROMPT"] = vAR_user_input
-                vAR_eval_df_list2.append(merged_df2)
+            
+            for merged_df, merged_df2 in results:
+                if merged_df is not None and merged_df2 is not None:
+                    vAR_eval_df_list.append(merged_df)
+                    vAR_eval_df_list2.append(merged_df2)
 
             vAR_final_eval_df = pd.concat(vAR_eval_df_list,ignore_index=True)
             # vAR_final_eval_df = vAR_final_eval_df.reset_index().rename(columns={'index': '#'})
@@ -179,9 +142,32 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
 
             st.table(vAR_final_eval_df)
 
+            # col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+            # with col1:
+                
+            #     st.markdown("<h3 style='font-size:18px;'>Token Count Analysis</h3>", unsafe_allow_html=True)
+            
+            # Sort by 'Timestamp' in descending order and take the first 10 rows
+            # sorted_df = vAR_assistant_phoenix_df.sort_values(by='end_time', ascending=False).head(7)
+            # st.table(sorted_df)
+
 
             
-            
+            # if "query" not in st.session_state:
+            #     st.session_state.query=[]
+            #     st.session_state.prompt_tokens=[]
+            #     st.session_state.response_tokens=[]
+                
+            # dict_token_count = {}
+            # st.session_state.query.append(vAR_user_input)
+            # st.session_state.prompt_tokens.append(vAR_run_usage.prompt_tokens)
+            # st.session_state.response_tokens.append(vAR_run_usage.completion_tokens)
+
+            # dict_token_count["query"] = st.session_state.query
+            # dict_token_count["prompt_tokens"] = st.session_state.prompt_tokens
+            # dict_token_count["response_tokens"] = st.session_state.response_tokens
+
+            # token_analysis(dict_token_count)
 
             # Bigquery Insert
             if vAR_model=="All" or vAR_model=="gpt-4o(Azure OpenAI)":
@@ -411,6 +397,7 @@ def LLM_RAG_Tracing(vAR_function,px_client, phoenix_df):
 def Bigquery_Insert(thread_id,vAR_user_input,vAR_response,request_id,response_id,model_name):
     
     vAR_response = vAR_response.replace("\n","").replace("\"","'")
+    vAR_user_input = vAR_user_input.replace("\n","").replace("\"","'")
     vAR_request_dict = {
         "THREAD_ID":thread_id,
         "REQUEST_ID":request_id,
@@ -507,3 +494,45 @@ def Bigquery_Eval_Insert(vAR_eval_df):
 def open_report_link():
     report_link = "https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee"
     webbrowser.open(report_link)
+
+def token_analysis(data):
+    print("Data for graph - ",data)
+
+    # Display the plot in Streamlit
+    # Create figure and axis objects
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    
+    # Plot first set of bars
+    x = np.arange(len(data['query']))
+    bar_width = 0.35
+    bars1 = ax1.bar(x - bar_width/2, data['prompt_tokens'], bar_width, 
+                    label='Count(prompt_tokens)', color='skyblue')
+    
+    # Plot second set of bars
+    bars2 = ax1.bar(x + bar_width/2, data['response_tokens'], bar_width,
+                    label='Count(response_tokens)', color='lightgreen')
+    
+    # Customize the plot
+    ax1.set_xlabel('Query')
+    ax1.set_ylabel('Counts')
+    ax1.set_title('Comparison of Counts by Query')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(data['query'])
+    ax1.legend()
+    
+    # Add value labels on top of bars
+    def add_value_labels(bars):
+        for bar in bars:
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{int(height)}',
+                    ha='center', va='bottom')
+    
+    add_value_labels(bars1)
+    add_value_labels(bars2)
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+
+    st.pyplot(fig)
+

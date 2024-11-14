@@ -114,6 +114,7 @@ api_version="2024-05-01-preview"
         messages = client.beta.threads.messages.list(
         thread_id=st.session_state.thread.id
     )
+        print("run respnse - ",run)
         print("OpenAI Assistant Raw Response - ",messages)
         # Loop through messages and print content based on role
         for msg in messages.data:
@@ -123,7 +124,7 @@ api_version="2024-05-01-preview"
             phoenix_df = px_client.get_spans_dataframe(timeout=None)
 
 #                 
-            return px_client,phoenix_df,content,st.session_state.thread.id,st.session_state.request_id,st.session_state.response_id,vAR_retrieved_text
+            return px_client,phoenix_df,content,st.session_state.thread.id,st.session_state.request_id,st.session_state.response_id,vAR_retrieved_text,run.usage
     elif run.status == 'requires_action':
         # the assistant requires calling some functions
         # and submit the tool outputs back to the run
