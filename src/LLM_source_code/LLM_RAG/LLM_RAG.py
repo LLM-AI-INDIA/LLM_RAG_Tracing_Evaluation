@@ -14,6 +14,7 @@ import pandas as pd
 import webbrowser
 import traceback
 from src.LLM_source_code.LLM_RAG.LLM_Evaluation import process_single_response
+from src.LLM_source_code.LLM_RAG.LLM_Guardrails_Call import guardrails_call
 import multiprocessing as mp
 from functools import partial
 from multiprocessing import Pool
@@ -57,12 +58,18 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
     px_client = None
     phoenix_df = None
 
+
     with container:
         with st.form(key='my_form', clear_on_submit=True):
             vAR_user_input = st.text_input("Prompt:", placeholder="How can I help you?", key='input')
             submit_button = st.form_submit_button(label='Interact with LLM')
 
+
+
         if submit_button and vAR_user_input and vAR_user_input!='':
+            vAR_guard_input_response = guardrails_call(vAR_user_input,'INPUT')
+            
+
             # Generate response from the agent
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 vAR_assistant = executor.submit(assistant_call,vAR_user_input,vAR_model)
@@ -72,6 +79,20 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                 vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai,vAR_run_usage = vAR_assistant.result()
                 vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id,vAR_retrieved_text_bedrock = vAR_bedrock.result()
                 vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id,vAR_retrieved_text_gemini = vAR_vertex.result()
+
+                vAR_guard_output_response = guardrails_call(vAR_response_bedrock,'OUTPUT')
+
+                if vAR_guard_output_response.get("action")=="GUARDRAIL_INTERVENED":
+                    st.warning("Guardrail Intervened in Below Policy! for model response")
+                    st.write("")
+                    st.json(vAR_guard_input_response.get("assessments"))
+                    vAR_response_bedrock = vAR_guard_output_response.get("outputs")[0]["text"]
+
+                if vAR_guard_input_response.get("action")=="GUARDRAIL_INTERVENED":
+                    st.warning("Guardrail Intervened in Below Policy! for user prompt")
+                    st.write("")
+                    st.json(vAR_guard_input_response.get("assessments"))
+                    vAR_response_bedrock = vAR_guard_input_response.get("outputs")[0]["text"]
 
                 print("vAR_assistant_result - ",vAR_assistant_response)
                 print("vAR_bedrock_result - ",vAR_response_bedrock)
@@ -96,6 +117,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             # vAR_final_df.style.hide(axis="index")
 
             st.table(vAR_final_df)
+
 
             # st.subheader("Tracing Dataframe")
             # st.dataframe(vAR_assistant_phoenix_df)
@@ -230,7 +252,6 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
                 st.write("")
                 for i in range(len(st.session_state['generated'])):
                     message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="big-smile")
-                    print("before message print response - ",st.session_state["generated"][i])
                     message(st.session_state["generated"][i], key=str(i+55), avatar_style="thumbs")
 
                     # Skip feedback for predefined messages
