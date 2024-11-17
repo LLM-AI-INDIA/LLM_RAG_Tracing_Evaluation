@@ -67,7 +67,6 @@ def assistant_call_with_annotation(user_input):
 from streamlit_feedback import streamlit_feedback
 
 def text_based():
-    from streamlit_feedback import streamlit_feedback
 
     prompt = None  # Initialize prompt with a default value
     m1, m2, m3 = st.columns([1, 5, 1])
@@ -127,11 +126,8 @@ def text_based():
                 if i == 1:
                     continue
 
-                # Feedback mechanism for assistant responses (excluding improved responses)
-                if (
-                    "improved" not in message  # Exclude improved responses
-                    and i not in st.session_state.feedback_given
-                ):
+                # Feedback mechanism for all assistant responses, including improved ones
+                if i not in st.session_state.feedback_given:
                     feedback_ = streamlit_feedback(
                         align="flex-start",
                         feedback_type="thumbs",
@@ -173,6 +169,7 @@ def text_based():
                         # Mark feedback as given for this message
                         st.session_state.feedback_given.add(i)
 
+                        # Process thumbs-down feedback
                         if feedback_score == "👎":
                             # Directly use request, response, and feedback variables
                             request = [st.session_state.messages[i - 1]["content"] if i > 0 else None]
@@ -186,10 +183,20 @@ def text_based():
                             | {feedback_text}                    | Tuning Model and Re-generating Response in Progress |
                             """
                             st.markdown(formatted_message)
-
+                            
+                            # Generate an improved response
                             from src.LLM_source_code.LLM_HumanFeedbackLoop.model import Azure_model_for_human_in_the_loop
-                            improved_response = Azure_model_for_human_in_the_loop(request, response, feedback)
-                            st.session_state.messages.append({"role": "assistant", "content": improved_response, "improved": True})
+                            improved_response = Azure_model_for_human_in_the_loop(request, response, feedback, feedback_text)
+                            
+                            improved_response = "Here is the improved response based on the given feedback:\n\n"+ improved_response
+
+
+                            # Update the current assistant message with the improved response
+                            st.session_state.messages.append({"role": "assistant", "content": improved_response})
+                            st.session_state.messages[i]["content"] = improved_response
+
+                            # Notify the user
+                            st.write("Response has been updated based on your feedback.")
 
         # User input
         prompt = st.chat_input("What else can I do to help?")

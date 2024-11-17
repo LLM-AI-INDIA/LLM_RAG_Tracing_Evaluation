@@ -33,13 +33,13 @@ from phoenix.evals import (
 
 def assistant_call(user_input,vAR_model):
 
-    PHOENIX_API_KEY = os.environ["PHOENIX_API_KEY"]
-    os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
-    os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com"
+    # PHOENIX_API_KEY = os.environ["PHOENIX_API_KEY"]
+    # os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
+    # os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com"
 
-    # Configuration is picked up from your environment variables
-    tracer_provider = register()
-    OpenAIInstrumentor().instrument(tracer_provider=tracer_provider, skip_dep_check=True)
+    # # Configuration is picked up from your environment variables
+    # tracer_provider = register()
+    # OpenAIInstrumentor().instrument(tracer_provider=tracer_provider, skip_dep_check=True)
 
     if 'client' not in st.session_state:
         st.session_state.request_id = 0
@@ -119,9 +119,9 @@ api_version="2024-05-01-preview"
         # Loop through messages and print content based on role
         for msg in messages.data:
             content = msg.content[0].text.value
-            px_client = px.Client()
+            # px_client = px.Client()
 
-            phoenix_df = px_client.get_spans_dataframe(timeout=None)
+            # phoenix_df = px_client.get_spans_dataframe(timeout=None)
 
 #                 
             return content,st.session_state.thread.id,st.session_state.request_id,st.session_state.response_id,vAR_retrieved_text,run.usage
