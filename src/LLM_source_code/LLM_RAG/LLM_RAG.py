@@ -40,9 +40,7 @@ def ConversationWoEval(vAR_model):
     
     # Initialize session state
     if 'history' not in st.session_state:
-        st.session_state.vAR_assistant_response_list = []
-        st.session_state.vAR_bedrock_response_list = []
-        st.session_state.vAR_vertex_response_list = []
+        st.session_state.vAR_bedrock_response_list_wo_eval = []
         st.session_state['history'] = []
 
     if 'generated' not in st.session_state:
@@ -98,11 +96,11 @@ def ConversationWoEval(vAR_model):
             
 
             # st.session_state.vAR_assistant_response_list.append(vAR_assistant_response)
-            st.session_state.vAR_bedrock_response_list.append(vAR_response_bedrock)
+            st.session_state.vAR_bedrock_response_list_wo_eval.append(vAR_response_bedrock)
             # st.session_state.vAR_vertex_response_list.append(vAR_response_vertex)
             
             # vAR_final_df = pd.DataFrame({"OpenAI":st.session_state.vAR_assistant_response_list,"Bedrock":st.session_state.vAR_bedrock_response_list,"Google":st.session_state.vAR_vertex_response_list})
-            vAR_final_df = pd.DataFrame({"Bedrock":st.session_state.vAR_bedrock_response_list})
+            vAR_final_df = pd.DataFrame({"Bedrock":st.session_state.vAR_bedrock_response_list_wo_eval})
 
             st.write("")
             col1,col2,col3,col4 = st.columns([5.5,2,5,1])
