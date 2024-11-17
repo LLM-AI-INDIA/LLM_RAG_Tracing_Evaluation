@@ -39,15 +39,15 @@ from src.LLM_source_code.LLM_RAG.LLM_Custom_Eval import Custom_Eval_Context_Prec
 def ConversationWoEval(vAR_model):
     
     # Initialize session state
-    if 'history' not in st.session_state:
+    if 'history_woeval' not in st.session_state:
         st.session_state.vAR_bedrock_response_list_wo_eval = []
-        st.session_state['history'] = []
+        st.session_state['history_woeval'] = []
 
-    if 'generated' not in st.session_state:
-        st.session_state['generated'] = ["Greetings! I am LLMAI Live Agent. How can I help you?"]
+    if 'generated_woeval' not in st.session_state:
+        st.session_state['generated_woeval'] = ["Greetings! I am LLMAI Live Agent. How can I help you?"]
 
-    if 'past' not in st.session_state:
-        st.session_state['past'] = ["We are delighted to have you here in the LLMAI Live Agent Chat room!"]
+    if 'past_woeval' not in st.session_state:
+        st.session_state['past_woeval'] = ["We are delighted to have you here in the LLMAI Live Agent Chat room!"]
 
     # Container for the chat history
     response_container = st.container()
@@ -131,8 +131,8 @@ def ConversationWoEval(vAR_model):
             # # Eval Insertion
             # Bigquery_Eval_Insert(vAR_final_eval_df2)
 
-            st.session_state['past'].append(vAR_user_input)
-            st.session_state['generated'].append(vAR_response_bedrock)
+            st.session_state['past_woeval'].append(vAR_user_input)
+            st.session_state['generated_woeval'].append(vAR_response_bedrock)
         
         # Thumbs color changes
         custom_css = """
@@ -175,16 +175,16 @@ def ConversationWoEval(vAR_model):
         st.markdown(custom_css,unsafe_allow_html=True)
 
 
-        if st.session_state['generated']:
+        if st.session_state['generated_woeval']:
             with response_container:
                 st.write("")
                 st.write("")
-                for i in range(len(st.session_state['generated'])):
-                    message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="big-smile")
-                    message(st.session_state["generated"][i], key=str(i+55), avatar_style="thumbs")
+                for i in range(len(st.session_state['generated_woeval'])):
+                    message(st.session_state["past_woeval"][i], is_user=True, key=str(i) + '_user', avatar_style="big-smile")
+                    message(st.session_state["generated_woeval"][i], key=str(i+55), avatar_style="thumbs")
 
                     # Skip feedback for predefined messages
-                    if st.session_state["past"][i] != st.session_state["past"][0] and st.session_state["generated"][i] != st.session_state["generated"][0]:
+                    if st.session_state["past_woeval"][i] != st.session_state["past_woeval"][0] and st.session_state["generated_woeval"][i] != st.session_state["generated_woeval"][0]:
                         feedback = st.feedback("thumbs", key=f"feedback_{i}")
                         if feedback is not None:
                             feedback_text = "thumbs up" if feedback == 1 else "thumbs down"
