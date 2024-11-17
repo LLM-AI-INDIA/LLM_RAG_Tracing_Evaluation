@@ -517,7 +517,7 @@ def LLM_RAG_Impl(choice):
                     st.markdown("<h3 style='font-size:18px;'>Select Sensitive Data</h3>", unsafe_allow_html=True)
 
                 with col29:
-                    vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number","Vehicle Identification Number(VIN)(Mask)","US Social Security Number(SSN)","Password"))
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number(Mask)","Vehicle Identification Number(VIN)(Mask)","US Social Security Number(SSN)(Block)","Password(Block)"))
                     st.write("")
             elif vAR_guard_category=="Word filters":
                 with col27:
