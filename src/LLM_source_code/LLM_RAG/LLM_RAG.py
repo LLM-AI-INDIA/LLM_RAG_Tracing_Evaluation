@@ -36,7 +36,7 @@ from src.LLM_source_code.LLM_RAG.LLM_Custom_Eval import Custom_Eval_Context_Prec
 
 
 
-def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
+def ConversationWoEval(vAR_knowledge_base,vAR_model,vAR_platform):
     
     # Initialize session state
     if 'history' not in st.session_state:
@@ -55,8 +55,207 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
     response_container = st.container()
     container = st.container()
     vAR_response = None
-    px_client = None
-    phoenix_df = None
+
+
+    with container:
+        with st.form(key='my_form', clear_on_submit=True):
+            vAR_user_input = st.text_input("Prompt:", placeholder="How can I help you?", key='input')
+            submit_button = st.form_submit_button(label='Interact with LLM')
+
+
+
+        if submit_button and vAR_user_input and vAR_user_input!='':
+            vAR_guard_input_response = guardrails_call(vAR_user_input,'INPUT')
+            
+
+            # Generate response from the agent
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                vAR_assistant = executor.submit(assistant_call,vAR_user_input,vAR_model)
+                vAR_bedrock = executor.submit(retrieve_generated,vAR_user_input,vAR_model)
+                vAR_vertex = executor.submit(generate,vAR_user_input)
+
+                vAR_assistant_response,assistant_thread_id,assistant_request_id,assistant_response_id,vAR_retrieved_text_openai,vAR_run_usage = vAR_assistant.result()
+                vAR_response_bedrock,bedrock_thread_id,bedrock_request_id,bedrock_response_id,vAR_retrieved_text_bedrock = vAR_bedrock.result()
+                vAR_response_vertex,vertex_thread_id,vertex_request_id,vertex_response_id,vAR_retrieved_text_gemini = vAR_vertex.result()
+
+                vAR_guard_output_response = guardrails_call(vAR_response_bedrock,'OUTPUT')
+
+                if vAR_guard_output_response.get("action")=="GUARDRAIL_INTERVENED":
+                    # st.warning("Guardrail Intervened in Below Policy! for model response")
+                    st.write("")
+                    # st.json(vAR_guard_input_response.get("assessments"))
+                    vAR_response_bedrock = vAR_guard_output_response.get("outputs")[0]["text"]
+
+                if vAR_guard_input_response.get("action")=="GUARDRAIL_INTERVENED":
+                    # st.warning("Guardrail Intervened in Below Policy! for user prompt")
+                    st.write("")
+                    # st.json(vAR_guard_input_response.get("assessments"))
+                    vAR_response_bedrock = vAR_guard_input_response.get("outputs")[0]["text"]
+
+                print("vAR_assistant_result - ",vAR_assistant_response)
+                print("vAR_bedrock_result - ",vAR_response_bedrock)
+                print("vAR_vertex_result - ",vAR_response_vertex)
+            
+
+            st.session_state.vAR_assistant_response_list.append(vAR_assistant_response)
+            st.session_state.vAR_bedrock_response_list.append(vAR_response_bedrock)
+            st.session_state.vAR_vertex_response_list.append(vAR_response_vertex)
+            
+            vAR_final_df = pd.DataFrame({"OpenAI":st.session_state.vAR_assistant_response_list,"Bedrock":st.session_state.vAR_bedrock_response_list,"Google":st.session_state.vAR_vertex_response_list})
+
+            st.write("")
+            col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+            with col1:
+                st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
+            with col2:
+                st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
+
+            # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
+            
+            # vAR_final_df.style.hide(axis="index")
+
+            st.table(vAR_final_df)
+
+
+
+    #         vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id,vAR_assistant_response),("Claude",vAR_response_bedrock,bedrock_thread_id,vAR_retrieved_text_bedrock),("Gemini",vAR_response_vertex,vertex_thread_id,vAR_response_vertex)]
+    #         process_func = partial(
+    #     process_single_response,
+    #     vAR_user_input=vAR_user_input,
+    #     assistant_request_id=assistant_request_id,
+    #     assistant_response_id=assistant_response_id
+    # )
+    
+    #         # Create a pool of workers
+    #         with Pool(processes=4) as pool:
+    #             # Map the processing function to all responses
+    #             results = pool.map(process_func, vAR_responses)
+            
+    #         # Separate results into two lists
+    #         vAR_eval_df_list = []
+    #         vAR_eval_df_list2 = []
+            
+    #         for merged_df, merged_df2 in results:
+    #             if merged_df is not None and merged_df2 is not None:
+    #                 vAR_eval_df_list.append(merged_df)
+    #                 vAR_eval_df_list2.append(merged_df2)
+
+    #         vAR_final_eval_df = pd.concat(vAR_eval_df_list,ignore_index=True)
+    #         # vAR_final_eval_df = vAR_final_eval_df.reset_index().rename(columns={'index': '#'})
+    #         # vAR_final_eval_df.style.hide(axis="index")
+
+    #         vAR_final_eval_df2 = pd.concat(vAR_eval_df_list2,ignore_index=True)
+
+
+    #         st.write("")
+    #         col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+    #         with col1:
+    #             st.markdown("<h3 style='font-size:18px;'>Generation & Retrieval Evaluation Metrics</h3>", unsafe_allow_html=True)
+    #         with col2:
+    #             st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
+
+    #         st.table(vAR_final_eval_df)
+
+            
+
+            # Bigquery Insert
+            if vAR_model=="All" or vAR_model=="gpt-4o(Azure OpenAI)":
+                Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
+            elif vAR_model=="gpt-4(Azure OpenAI)":
+                Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4")
+            Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
+            Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
+            
+            # # Eval Insertion
+            # Bigquery_Eval_Insert(vAR_final_eval_df2)
+
+            st.session_state['past'].append(vAR_user_input)
+            st.session_state['generated'].append(vAR_response_bedrock)
+        
+        # Thumbs color changes
+        custom_css = """
+    <style>
+    """
+        for i in range(1,52):
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-9p65df.e1f1d6gn4 > div > div > button:nth-child(1) > span > span"""
+            # Add a comma unless it's the last iteration
+            if i < 50:
+                custom_css += ",\n"
+            elif i>50:
+                custom_css+="\n"
+
+        custom_css += """{
+    color: green !important;
+    font-size: x-large !important;
+}
+"""
+
+        # Loop again for button:nth-child(2)
+        for i in range(1, 52):
+            # Append the CSS selectors for button:nth-child(2)
+                          
+            custom_css += f"""#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(12) > div > div > div.stElementContainer.element-container.st-key-feedback_{i}.st-emotion-cache-9p65df.e1f1d6gn4 > div > div > button:nth-child(2) > span > span"""
+            
+            # Add a comma unless it's the last iteration
+            if i < 50:
+                custom_css += ",\n"
+            elif i>50:
+                custom_css+="\n"
+
+        # Start the CSS rule for button:nth-child(2)
+        custom_css += """{
+            color: red !important;
+            font-size: x-large !important;
+            padding: 10px;
+        }
+        </style>"""
+
+        st.markdown(custom_css,unsafe_allow_html=True)
+
+
+        if st.session_state['generated']:
+            with response_container:
+                st.write("")
+                st.write("")
+                for i in range(len(st.session_state['generated'])):
+                    message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="big-smile")
+                    message(st.session_state["generated"][i], key=str(i+55), avatar_style="thumbs")
+
+                    # Skip feedback for predefined messages
+                    if st.session_state["past"][i] != st.session_state["past"][0] and st.session_state["generated"][i] != st.session_state["generated"][0]:
+                        feedback = st.feedback("thumbs", key=f"feedback_{i}")
+                        if feedback is not None:
+                            feedback_text = "thumbs up" if feedback == 1 else "thumbs down"
+                            feedback_class = "thumbs-up" if feedback == 1 else "thumbs-down"
+                            st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
+    return vAR_response
+
+
+
+
+
+
+
+
+def ConversationWithEval(vAR_knowledge_base,vAR_model,vAR_platform):
+    
+    # Initialize session state
+    if 'history' not in st.session_state:
+        st.session_state.vAR_assistant_response_list = []
+        st.session_state.vAR_bedrock_response_list = []
+        st.session_state.vAR_vertex_response_list = []
+        st.session_state['history'] = []
+
+    if 'generated' not in st.session_state:
+        st.session_state['generated'] = ["Greetings! I am LLMAI Live Agent. How can I help you?"]
+
+    if 'past' not in st.session_state:
+        st.session_state['past'] = ["We are delighted to have you here in the LLMAI Live Agent Chat room!"]
+
+    # Container for the chat history
+    response_container = st.container()
+    container = st.container()
+    vAR_response = None
 
 
     with container:
@@ -119,12 +318,6 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             st.table(vAR_final_df)
 
 
-            # st.subheader("Tracing Dataframe")
-            # st.dataframe(vAR_assistant_phoenix_df)
-
-
-            # queries_df = get_qa_with_reference(px_client)
-            # retrieved_documents_df = get_retrieved_documents(px_client)
 
             vAR_responses = [("GPT",vAR_assistant_response,assistant_thread_id,vAR_assistant_response),("Claude",vAR_response_bedrock,bedrock_thread_id,vAR_retrieved_text_bedrock),("Gemini",vAR_response_vertex,vertex_thread_id,vAR_response_vertex)]
             process_func = partial(
@@ -164,32 +357,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
 
             st.table(vAR_final_eval_df)
 
-            # col1,col2,col3,col4 = st.columns([5.5,2,5,1])
-            # with col1:
-                
-            #     st.markdown("<h3 style='font-size:18px;'>Token Count Analysis</h3>", unsafe_allow_html=True)
             
-            # Sort by 'Timestamp' in descending order and take the first 10 rows
-            # sorted_df = vAR_assistant_phoenix_df.sort_values(by='end_time', ascending=False).head(7)
-            # st.table(sorted_df)
-
-
-            
-            # if "query" not in st.session_state:
-            #     st.session_state.query=[]
-            #     st.session_state.prompt_tokens=[]
-            #     st.session_state.response_tokens=[]
-                
-            # dict_token_count = {}
-            # st.session_state.query.append(vAR_user_input)
-            # st.session_state.prompt_tokens.append(vAR_run_usage.prompt_tokens)
-            # st.session_state.response_tokens.append(vAR_run_usage.completion_tokens)
-
-            # dict_token_count["query"] = st.session_state.query
-            # dict_token_count["prompt_tokens"] = st.session_state.prompt_tokens
-            # dict_token_count["response_tokens"] = st.session_state.response_tokens
-
-            # token_analysis(dict_token_count)
 
             # Bigquery Insert
             if vAR_model=="All" or vAR_model=="gpt-4o(Azure OpenAI)":
@@ -199,7 +367,7 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
             Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
             Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
-            # # Eval Insertion
+            # Eval Insertion
             Bigquery_Eval_Insert(vAR_final_eval_df2)
 
             st.session_state['past'].append(vAR_user_input)
@@ -264,7 +432,13 @@ def Conversation(vAR_knowledge_base,vAR_model,vAR_platform):
     return vAR_response
 
 
-def LLM_RAG_Impl():
+
+
+
+
+
+
+def LLM_RAG_Impl(choice):
     
     col1,col2,col3,col4,col5 = st.columns([1,5,1,5,1])
     col21,col22,col23,col24,col25 = st.columns([1,5,1,5,1])
@@ -279,6 +453,10 @@ def LLM_RAG_Impl():
     vAR_model = None
     vAR_questions = None
     vAR_knowledge_base = None
+    vAR_guard_2ndlvl_category = None
+    vAR_guard_category = None
+    vAR_eval_llm = None
+    vAR_eval_type = None
 
     with col2:
         st.write("")
@@ -323,95 +501,99 @@ def LLM_RAG_Impl():
             elif vAR_model=="gemini-1.5(Vertex AI)":
                 vAR_platform = st.selectbox(" ",("Vertex AI(Gemini)"))
                 st.write("")
-
-        vAR_response = Conversation(vAR_knowledge_base,vAR_model,vAR_platform)
-
-        # col31,col32,col33 = st.columns([2,3,2])
-
-        # with col32:
-        #     vAR_function = st.radio("Select Functionality",["Observability","Evaluation"],horizontal=True)
-        # if vAR_function=="Observability":
-        #     LLM_RAG_Tracing(vAR_function,px_client, phoenix_df)
-        #     pass
-        # else:
-        #     pass
-        # col34,col35,col36,col37,col38 = st.columns([1,5,1,5,1])
-        # col39,col40,col41 = st.columns([1,5,1])
-        # if vAR_function=="Evaluation":
-        #     with col35:
-        #         st.subheader("Select Metrics")
-        #     with col37:
-        #         selected_metrics = st.multiselect("Select metrics",["All","Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"])
-        #         if "All" in selected_metrics:
-        #             selected_metrics = ["Hallucination Score","QA Correctness Score","Retrieval Relevance Score","Bias","Noise Sensitivity","Context Recall"]
-        #     with col40:
-        #         st.write("")
-        #         st.write("")
-        #         with st.expander("Evaluation Metrics Definition"):
-        #             st.write("**Hallucination :** This Eval is specifically designed to detect hallucinations in generated answers from private or retrieved data. The Eval detects if an AI answer to a question is a hallucination based on the reference data used to generate the answer.")
-        #             st.write("**QA Correctness :** This Eval evaluates whether a question was correctly answered by the system based on the retrieved data. In contrast to retrieval Evals that are checks on chunks of data returned, this check is a system level check of a correct Q&A.")
-        #             st.write("**Retrieval Relevance :** This Eval evaluates whether a retrieved chunk contains an answer to the query. It's extremely useful for evaluating retrieval systems.")
-        #             st.write("**Context Recall :** Context Recall measures how many of the relevant documents (or pieces of information) were successfully retrieved. It focuses on not missing important results. Higher recall means fewer relevant documents were left out.")
-        #             st.write("**Noise Sensitivity :** NoiseSensitivity measures how often a system makes errors by providing incorrect responses when utilizing either relevant or irrelevant retrieved documents. The score ranges from 0 to 1, with lower values indicating better performance.")
-                
-        #     if selected_metrics:
-        #         LLM_RAG_Tracing(vAR_function,px_client, phoenix_df)
-        #         st.write("")
-
-
-
-
-
-
-def LLM_RAG_Tracing(vAR_function,px_client, phoenix_df):
-    
-    if vAR_function=="Observability":
-        st.write("Tracing/Span Dataframe")
-        st.dataframe(phoenix_df)
-
-    if vAR_function!="Observability":
-        # spans = query_spans(px_client)
-        # queries_df = get_qa_with_reference(px_client)
-        retrieved_documents_df = get_retrieved_documents(px_client)
-
-
-        # Evaluation Metrics
-        # https://docs.arize.com/phoenix/evaluation/concepts-evals/evaluation
-        # https://docs.arize.com/phoenix/api/evaluation-models#openaimodel
-
-        eval_model = OpenAIModel()
         
-        hallucination_evaluator = HallucinationEvaluator(eval_model)
-        qa_correctness_evaluator = QAEvaluator(eval_model)
-        relevance_evaluator = RelevanceEvaluator(eval_model)
+        if choice=="LLM Guardrail":
+            with col12:
+                st.write("")
+                st.markdown("<h3 style='font-size:18px;'>Select Guardrails Function</h3>", unsafe_allow_html=True)
 
-        # Generation Evaluation
-        hallucination_eval_df, qa_correctness_eval_df = run_evals(
-            dataframe=queries_df,
-            evaluators=[hallucination_evaluator, qa_correctness_evaluator],
-            provide_explanation=True,
-        )
-        # Retrieval Evaluation
-        relevance_eval_df = run_evals(
-            dataframe=retrieved_documents_df,
-            evaluators=[relevance_evaluator],
-            provide_explanation=True,
-        )[0]
+            with col14:
+                vAR_guard_category = st.selectbox(" ",("Sensitive Information filters","Word filters","Phrases filters","Denied Topics","Content filters","Prompt attacks"))
+                st.write("")
+            
+            if vAR_guard_category=="Sensitive Information filters":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Sensitive Data</h3>", unsafe_allow_html=True)
 
-        st.write("Queries")
-        st.dataframe(queries_df)
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number","Vehicle Identification Number(VIN)(Mask)","US Social Security Number(SSN)","Password"))
+                    st.write("")
+            elif vAR_guard_category=="Word filters":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Word Filter Data</h3>", unsafe_allow_html=True)
 
-        st.write("Retrieved Docs")
-        st.dataframe(retrieved_documents_df)
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("LICENSE PLATE","SSN","VIN","DL","RN"))
+                    st.write("")
+            elif vAR_guard_category=="Denied Topics":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Denied Topic</h3>", unsafe_allow_html=True)
 
-        st.write("Hallucination Result")
-        st.dataframe(hallucination_eval_df)
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("Terrorism","Racism","Age"))
+                    st.write("")
+            elif vAR_guard_category=="Phrases filters":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Phrase Filters</h3>", unsafe_allow_html=True)
 
-        st.write("Q&A Correctness")
-        st.dataframe(qa_correctness_eval_df)
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("Speeding Drivers","Return to India","Indefatigable India"))
+                    st.write("")
+            elif vAR_guard_category=="Prompt attacks":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
 
-        st.write("Retrieval Relevance Score")
-        st.dataframe(relevance_eval_df)
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("Role Playing Exploit","Malicious Input","Jailbreaking"))
+                    st.write("")
+
+            elif vAR_guard_category=="Content filters":
+                with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
+
+                with col29:
+                    vAR_guard_2ndlvl_category = st.selectbox(" ",("Hate","Insult","Sexual","Violence","Misconduct"))
+                    st.write("")
+
+            print("vAR_guard_category - ",vAR_guard_category)
+            print("vAR_guard_2ndlvl_category - ",vAR_guard_2ndlvl_category)
+            if vAR_guard_category and vAR_guard_2ndlvl_category:
+                vAR_response = ConversationWoEval(vAR_knowledge_base,vAR_model,vAR_platform)
+            else:
+                st.warning("Please select proper Guardrails Options!")
+        elif  choice=="LLM as a Judge":
+            with col12:
+                st.write("")
+                st.markdown("<h3 style='font-size:18px;'>Select LLM as Judge Model(Evaluator)</h3>", unsafe_allow_html=True)
+
+            with col14:
+                vAR_eval_llm = st.selectbox(" ",("GPT(Default)","Claude","Gemini"))
+                st.write("")
+
+            with col27:
+                    st.write("")
+                    st.markdown("<h3 style='font-size:18px;'>Select LLM as Judge Type</h3>", unsafe_allow_html=True)
+
+            with col29:
+                vAR_eval_type = st.selectbox(" ",("Pairwise Comparison(Default)","Evaluation by criteria with reference","Evaluation by criteria without reference"))
+                st.write("")
+
+            if vAR_eval_llm and vAR_eval_type:
+                vAR_response = ConversationWithEval(vAR_knowledge_base,vAR_model,vAR_platform)
+            else:
+                st.warning("Please select proper LLM as Judge Options!")
+
+        
+
+
+
+
 
 
 

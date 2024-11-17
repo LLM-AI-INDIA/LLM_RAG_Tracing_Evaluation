@@ -29,7 +29,7 @@ def All_Initialization():
     st.sidebar.markdown("<h2 style='text-align: center; color: white; font-size:20px;'>Solution Scope</h2>", unsafe_allow_html=True)
     
     vAR_choice2 =  st.sidebar.selectbox(" ",('Home','About Us'))
-    vAR_choice1 =  st.sidebar.selectbox(" ",('Select Application','LLM Tracing & Evaluation')) #,'Policy Analysis - Dialogflow','Policy Analysis - Evaluation'
+    vAR_choice1 =  st.sidebar.selectbox(" ",('Select Application','LLM Guardrail','LLM as a Judge','LLM Human in the Feedback Loop')) #,'Policy Analysis - Dialogflow','Policy Analysis - Evaluation'
     vAR_choice3 =  st.sidebar.selectbox(" ",('Libraries in Scope','OpenAI','Streamlit'))
     vAR_choice4 =  st.sidebar.selectbox(" ",('Models Used','GPT4', 'GPT3.5','Claude','Llama','Titan'))
     menu = ["Google Cloud Services in Scope","Cloud Storage", "Cloud Run", "Cloud Function", "Secret Manager","AWS-OpenSearch(Serverless VectorStore)"]

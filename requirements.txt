@@ -15,3 +15,4 @@ openinference-instrumentation-bedrock
 deepeval==1.4.6
 lm-format-enforcer
 matplotlib
+streamlit-feedback==0.1.3
