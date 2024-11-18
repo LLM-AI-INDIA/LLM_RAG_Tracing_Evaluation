@@ -131,7 +131,7 @@ def text_based():
                     feedback_ = streamlit_feedback(
                         align="flex-start",
                         feedback_type="thumbs",
-                        optional_text_label="[Optional] Please provide an explanation",
+                        optional_text_label="[Human Feedback Optional] Please provide an explanation",
                         key=f"thumbs_{i}"  # Unique key for each feedback element
                     )
 

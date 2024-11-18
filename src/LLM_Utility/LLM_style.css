@@ -75,9 +75,17 @@
 }
 
 /* Report View Button color updated2 */
+
 #root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(13) > div > div > div.stHorizontalBlock.st-emotion-cache-ocqkz7.e1f1d6gn5 > div.stColumn.st-emotion-cache-1wvp1g3.e1f1d6gn3 > div > div > div > div > div > a,
 
 #root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(13) > div > div > div:nth-child(6) > div.stColumn.st-emotion-cache-1wvp1g3.e1f1d6gn3 > div > div > div > div > div > a
+{
+    background: rgb(50, 205, 50);
+    color: white;
+}
+
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(13) > div > div > div:nth-child(3) > div.stColumn.st-emotion-cache-mb2p8r.e1f1d6gn3 > div > div > div > div > div > a,
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(13) > div > div > div:nth-child(6) > div.stColumn.st-emotion-cache-mb2p8r.e1f1d6gn3 > div > div > div > div > div > a
 {
     background: rgb(50, 205, 50);
     color: white;

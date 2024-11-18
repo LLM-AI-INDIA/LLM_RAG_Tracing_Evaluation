@@ -103,9 +103,9 @@ def ConversationWoEval(vAR_model):
             vAR_final_df = pd.DataFrame({"Bedrock":st.session_state.vAR_bedrock_response_list_wo_eval})
 
             st.write("")
-            col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+            col1,col2,col3,col4 = st.columns([7,3,5,1])
             with col1:
-                st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:18px;'>LLM Response Summary</h3>", unsafe_allow_html=True)
             with col2:
                 st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
@@ -299,9 +299,9 @@ def ConversationWithEval(vAR_model):
 
 
             st.write("")
-            col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+            col1,col2,col3,col4 = st.columns([7,3,5,1])
             with col1:
-                st.markdown("<h3 style='font-size:18px;'>Response Summary</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:18px;'>LLM Response Summary</h3>", unsafe_allow_html=True)
             with col2:
                 st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
@@ -352,9 +352,9 @@ def ConversationWithEval(vAR_model):
 
 
                 st.write("")
-                col1,col2,col3,col4 = st.columns([5.5,2,5,1])
+                col1,col2,col3,col4 = st.columns([7,3,5,1])
                 with col1:
-                    st.markdown("<h3 style='font-size:18px;'>Generation & Retrieval Evaluation Metrics</h3>", unsafe_allow_html=True)
+                    st.markdown("<h3 style='font-size:18px;'>Judge (GPT4) Reasoning and Evaluation Score</h3>", unsafe_allow_html=True)
                 with col2:
                     st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
 
@@ -486,7 +486,7 @@ def LLM_RAG_Impl(choice):
 
     with col2:
         st.write("")
-        st.markdown("<h3 style='font-size:18px;'>Select Use Case</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='font-size:16px;'>Select Use Case</h3>", unsafe_allow_html=True)
     with col4:
         vAR_usecase = st.selectbox(" ",("Policy Guru","Multimodal RAG"))
         st.write("")
@@ -495,14 +495,14 @@ def LLM_RAG_Impl(choice):
 
         with col17:
             st.write("")
-            st.markdown("<h3 style='font-size:18px;'>Select LLM</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
             vAR_model = st.selectbox(" ",("claude-3.5-sonnet(Bedrock)"))
             st.write("")
 
         with col7:
             st.write("")
-            st.markdown("<h3 style='font-size:18px;'>Select Platform</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
             if vAR_model=="claude-3.5-sonnet(Bedrock)":
                 vAR_platform = st.selectbox(" ",("AWS Bedrock"))
@@ -510,7 +510,7 @@ def LLM_RAG_Impl(choice):
 
         with col12:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Guardrails Function</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Guardrails Function</h3>", unsafe_allow_html=True)
 
         with col14:
             vAR_guard_category = st.selectbox(" ",("Sensitive Information filters","Word filters","Phrases filters","Denied Topics","Content filters","Prompt attacks"))
@@ -519,7 +519,7 @@ def LLM_RAG_Impl(choice):
         if vAR_guard_category=="Sensitive Information filters":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Sensitive Data</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Sensitive Data</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number(Mask)","Vehicle Identification Number(VIN)(Mask)","US Social Security Number(SSN)(Block)","Password(Block)"))
@@ -527,7 +527,7 @@ def LLM_RAG_Impl(choice):
         elif vAR_guard_category=="Word filters":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Word Filter Data</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Word Filter Data</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("LICENSE PLATE","SSN","VIN","DL","RN"))
@@ -535,7 +535,7 @@ def LLM_RAG_Impl(choice):
         elif vAR_guard_category=="Denied Topics":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Denied Topic</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Denied Topic</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("Terrorism","Racism","Age"))
@@ -543,7 +543,7 @@ def LLM_RAG_Impl(choice):
         elif vAR_guard_category=="Phrases filters":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Phrase Filters</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Phrase Filters</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("Speeding Drivers","Return to India","Indefatigable India"))
@@ -551,7 +551,7 @@ def LLM_RAG_Impl(choice):
         elif vAR_guard_category=="Prompt attacks":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("Role Playing Exploit","Malicious Input","Jailbreaking"))
@@ -560,7 +560,7 @@ def LLM_RAG_Impl(choice):
         elif vAR_guard_category=="Content filters":
             with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select Prompt Attack Type</h3>", unsafe_allow_html=True)
 
             with col29:
                 vAR_guard_2ndlvl_category = st.selectbox(" ",("Hate","Insult","Sexual","Violence","Misconduct"))
@@ -584,14 +584,14 @@ def LLM_RAG_Impl(choice):
         
         with col17:
             st.write("")
-            st.markdown("<h3 style='font-size:18px;'>Select LLM</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
             vAR_model = st.selectbox(" ",("All","gpt-4o(Azure OpenAI)","gpt-4(Azure OpenAI)","claude-3.5-sonnet(Bedrock)","gemini-1.5(Vertex AI)"))
             st.write("")
 
         with col7:
             st.write("")
-            st.markdown("<h3 style='font-size:18px;'>Select Platform</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
             if vAR_model=="All":
                 vAR_platform = st.selectbox(" ",("All","Assistant(Azure OpenAI)","AWS Bedrock","Vertex AI(Gemini)"))
@@ -608,7 +608,7 @@ def LLM_RAG_Impl(choice):
         
         with col12:
             st.write("")
-            st.markdown("<h3 style='font-size:18px;'>Select LLM as Judge Model(Evaluator)</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size:16px;'>Select LLM as a Judge Model(Evaluator)</h3>", unsafe_allow_html=True)
 
         with col14:
             vAR_eval_llm = st.selectbox(" ",("GPT(Default)","Claude","Gemini"))
@@ -616,7 +616,7 @@ def LLM_RAG_Impl(choice):
 
         with col27:
                 st.write("")
-                st.markdown("<h3 style='font-size:18px;'>Select LLM as Judge Type</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size:16px;'>Select LLM as a Judge Type</h3>", unsafe_allow_html=True)
 
         with col29:
             vAR_eval_type = st.selectbox(" ",("Pairwise Comparison(Default)","Evaluation by criteria with reference","Evaluation by criteria without reference"))
