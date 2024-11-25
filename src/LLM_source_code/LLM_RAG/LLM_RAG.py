@@ -18,6 +18,7 @@ from src.LLM_source_code.LLM_RAG.LLM_Guardrails_Call import guardrails_call
 import multiprocessing as mp
 from functools import partial
 from multiprocessing import Pool
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Agent_Call import bedrock_agent_chat
 
 
 
@@ -53,6 +54,7 @@ def ConversationWoEval(vAR_model):
     response_container = st.container()
     container = st.container()
     vAR_response = None
+    vAR_response_bedrock = None
 
 
     with container:
@@ -125,7 +127,9 @@ def ConversationWoEval(vAR_model):
             #     Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4o")
             # elif vAR_model=="gpt-4(Azure OpenAI)":
             #     Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4")
-            Bigquery_Insert(bedrock_thread_id,vAR_user_input,vAR_response_bedrock,bedrock_request_id,bedrock_response_id,"Anthropic-Claude-3.5-Sonnet")
+            
+            # Below code can be changes later
+            Bigquery_Insert("001",vAR_user_input,vAR_response_bedrock,1,2,"Anthropic-Claude-3.5-Sonnet")
             # Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
             # # Eval Insertion
@@ -258,7 +262,7 @@ def ConversationWithEval(vAR_model):
                 if vAR_model in ["All", "claude-3.5-sonnet(Bedrock)"]:
                     futures.append(('bedrock', executor.submit(retrieve_generated, vAR_user_input, vAR_model)))
                 if vAR_model in ["All", "gemini-1.5(Vertex AI)"]:
-                    futures.append(('vertex', executor.submit(generate, vAR_user_input)))
+                    futures.append(('vertex', executor.submit(generate, vAR_user_input,vAR_model)))
 
                 
                 # Collect results
@@ -627,7 +631,28 @@ def LLM_RAG_Impl(choice):
         else:
             st.warning("Please select proper LLM as Judge Options!")
 
+    elif vAR_usecase=="Policy Guru" and choice=="LLM Agent":
+
+        with col17:
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
+        with col19:
+            vAR_model = st.selectbox(" ",("claude-3.5-sonnet(Bedrock)"))
+            st.write("")
+
+        with col7:
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
+        with col9:
+            if vAR_model=="claude-3.5-sonnet(Bedrock)":
+                vAR_platform = st.selectbox(" ",("AWS Bedrock"))
+                st.write("")
+
         
+        bedrock_agent_chat()
+            
+            
+  
 
 
 
@@ -636,8 +661,9 @@ def LLM_RAG_Impl(choice):
 
 
 def Bigquery_Insert(thread_id,vAR_user_input,vAR_response,request_id,response_id,model_name):
-    
-    vAR_response = vAR_response.replace("\n","").replace("\"","'")
+
+    if vAR_response:
+        vAR_response = vAR_response.replace("\n","").replace("\"","'")
     vAR_user_input = vAR_user_input.replace("\n","").replace("\"","'")
     vAR_request_dict = {
         "THREAD_ID":thread_id,

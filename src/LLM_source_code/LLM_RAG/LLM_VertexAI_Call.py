@@ -4,7 +4,7 @@ from vertexai.generative_models import GenerativeModel, Part, SafetySetting
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import generate_random_string
 import streamlit as st
 
-def generate(input):
+def generate(input,vAR_model):
 
 
 

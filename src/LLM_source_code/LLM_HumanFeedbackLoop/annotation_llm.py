@@ -3,6 +3,9 @@ import time
 import streamlit as st
 from openai import AzureOpenAI
 from google.cloud import bigquery
+from docx import Document
+import re
+import shutil
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\Admin\Downloads\elp-2022-352222-230ab152d47c.json"
 
@@ -38,7 +41,7 @@ def assistant_call_with_annotation(user_input):
         # Initiate a run
         run = client.beta.threads.runs.create(
             thread_id=st.session_state.thread.id,
-            assistant_id=os.getenv("ASSISTANT_ID"),
+            assistant_id=os.getenv("ASSISTANT_ID_FOR_FEEDBACK"),
         )
 
         # Poll until the run completes or fails
@@ -64,10 +67,13 @@ def assistant_call_with_annotation(user_input):
         return "The assistant encountered an error. Please try again later."
 
 
+from docx import Document
+import re
+import time
+import streamlit as st
 from streamlit_feedback import streamlit_feedback
 
 def text_based():
-
     prompt = None  # Initialize prompt with a default value
     m1, m2, m3 = st.columns([1, 5, 1])
 
@@ -79,6 +85,51 @@ def text_based():
         ]
     if "feedback_given" not in st.session_state:
         st.session_state.feedback_given = set()  # Track feedback for each assistant message
+
+    # Initialize file copy and delete tracking
+    if "file_copied" not in st.session_state:
+        st.session_state.file_copied = False
+    if "file_deleted" not in st.session_state:
+        st.session_state.file_deleted = False
+
+    # Ensure Azure client is initialized only once
+    if "client" not in st.session_state:
+        try:
+            st.session_state.client = AzureOpenAI(
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version="2024-05-01-preview",
+            )
+        except Exception as e:
+            st.error(f"Error initializing Azure client: {e}")
+            return
+
+    # File management: Update vector store if file is not deleted yet
+    if not st.session_state.file_deleted:
+        try:
+            file_path = "DMV_FAQ.docx"
+            vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+                vector_store_id=os.getenv("VECTOR_STORE_ID")
+            )
+
+            if vector_store_files.data:
+                file_ids = vector_store_files.data[0].id
+                st.session_state.client.beta.vector_stores.files.delete(
+                    vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
+                )
+
+            # Upload updated document to vector store
+            response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
+            file_id = response.id
+            st.session_state.client.beta.vector_stores.files.create(
+                vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
+            )
+
+            st.session_state.file_deleted = True
+            print("Base File Updated")
+        except Exception as e:
+            st.error(f"Error updating vector store: {e}")
+            return
 
     # Custom CSS for alignment and styling
     st.markdown(
@@ -122,22 +173,20 @@ def text_based():
                     unsafe_allow_html=True,
                 )
 
-                # Exclude feedback for the first assistant message
+                # Skip feedback for the first assistant message
                 if i == 1:
                     continue
 
-                # Feedback mechanism for all assistant responses, including improved ones
+                # Feedback mechanism for all assistant responses
                 if i not in st.session_state.feedback_given:
                     feedback_ = streamlit_feedback(
                         align="flex-start",
                         feedback_type="thumbs",
-                        optional_text_label="[Human Feedback Optional] Please provide an explanation",
+                        optional_text_label="[ Human Feedback Optional ] Please provide an explanation",
                         key=f"thumbs_{i}"  # Unique key for each feedback element
                     )
 
                     if feedback_:
-                        # Parse the feedback output
-                        feedback_type = feedback_.get("type", "unknown")
                         feedback_score = feedback_.get("score", "neutral")
                         feedback_text = feedback_.get("text", "")
 
@@ -145,64 +194,71 @@ def text_based():
                         if feedback_text:
                             st.write(f"Optional feedback provided: {feedback_text}")
 
-                        # Insert feedback into BigQuery
-                        rows_to_insert = [
-                            {
-                                "request_prompt": st.session_state.messages[i - 1]["content"] if i > 0 else None,
-                                "model_response": message["content"],
-                                "feedback_type": feedback_type,
-                                "feedback_score": feedback_score,
-                                "feedback_text": feedback_text,
-                            }
-                        ]
-
-                        # Insert rows into the BigQuery table
-                        errors = biq_query_client.insert_rows_json(table_id, rows_to_insert)
-
-                        # Check for errors
-                        if errors == []:
-                            st.write("Your feedback has been successfully recorded.")
-                        else:
-                            st.write("There was an error recording your feedback. Please try again.")
-                            st.error(f"BigQuery Insertion Errors: {errors}")
-
-                        # Mark feedback as given for this message
                         st.session_state.feedback_given.add(i)
 
-                        # Process thumbs-down feedback
+                        if feedback_score == "👍":
+                            user_message = st.session_state.messages[i - 1]["content"] if i > 0 else None
+                            assistant_message = message["content"]
+                            user_message = re.sub(r"[\[\]',]", "", str(user_message)).strip()
+                            if not st.session_state.file_copied:
+                                try:
+                                    source_file = "DMV_FAQ.docx"
+                                    destination_file = "DMV_FAQ_copy.docx"
+                                    shutil.copy(source_file, destination_file)
+                                    st.session_state.file_copied = True
+                                except Exception as e:
+                                    st.error(f"Error during file operations: {e}")
+                            print(f"Old Thread ID: {st.session_state.thread.id}")
+                            st.session_state.thread = st.session_state.client.beta.threads.create()
+                            print(f"New Thread ID: {st.session_state.thread.id}")
+                            file_path = "DMV_FAQ_copy.docx"
+                            text = f"\n\n{user_message}\n\n{assistant_message}"
+
+                            # Load and update the .docx file
+                            doc = Document(file_path)
+                            doc.add_paragraph(text)
+                            doc.save(file_path)
+
+                            # Update vector store
+                            vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+                                vector_store_id=os.getenv("VECTOR_STORE_ID")
+                            )
+                            if vector_store_files.data:
+                                file_ids = vector_store_files.data[0].id
+                                st.session_state.client.beta.vector_stores.files.delete(
+                                    vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
+                                )
+
+                            response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
+                            file_id = response.id
+                            st.session_state.client.beta.vector_stores.files.create(
+                                vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
+                            )
+                            print("Session File Updated")
+                            st.write("File successfully updated and added to vector store.")
+                                
                         if feedback_score == "👎":
-                            # Directly use request, response, and feedback variables
-                            request = [st.session_state.messages[i - 1]["content"] if i > 0 else None]
-                            response = [message["content"]]
-                            feedback = [feedback_score]
+                            try:
+                                from src.LLM_source_code.LLM_HumanFeedbackLoop.model import Azure_model_for_human_in_the_loop
+                                request = st.session_state.messages[i - 1]["content"] if i > 0 else ""
+                                response = [message["content"]]
+                                feedback = [feedback_score]
+                                improved_response = Azure_model_for_human_in_the_loop(request, response, feedback, feedback_text)
 
-                            # Format the user message as a table
-                            formatted_message = f"""
-                            | Feedback                           | Action                                              |
-                            |------------------------------------|-----------------------------------------------------|
-                            | {feedback_text}                    | Tuning Model and Re-generating Response in Progress |
-                            """
-                            st.markdown(formatted_message)
-                            
-                            # Generate an improved response
-                            from src.LLM_source_code.LLM_HumanFeedbackLoop.model import Azure_model_for_human_in_the_loop
-                            improved_response = Azure_model_for_human_in_the_loop(request, response, feedback, feedback_text)
-                            
-                            improved_response = "Here is the improved response based on the given feedback:\n\n"+ improved_response
-
-
-                            # Update the current assistant message with the improved response
-                            st.session_state.messages.append({"role": "assistant", "content": improved_response})
-                            st.session_state.messages[i]["content"] = improved_response
-
-                            # Notify the user
-                            st.write("Response has been updated based on your feedback.")
+                                st.session_state.messages.append({"role": "user", "content": request})
+                                st.session_state.messages.append({"role": "assistant", "content": improved_response})
+                                st.write("Response has been updated based on your feedback.")
+                            except Exception as e:
+                                st.error(f"Error improving response: {e}")
 
         # User input
         prompt = st.chat_input("What else can I do to help?")
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
-            response = assistant_call_with_annotation(prompt)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            try:
+                response = assistant_call_with_annotation(prompt)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.error(f"Error generating assistant response: {e}")
             time.sleep(1)
             st.rerun()
