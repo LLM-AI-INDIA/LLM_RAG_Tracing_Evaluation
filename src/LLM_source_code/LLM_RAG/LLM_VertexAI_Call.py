@@ -1,7 +1,7 @@
 import base64
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, SafetySetting
-from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import generate_random_string
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call_KB import generate_random_string
 import streamlit as st
 
 def generate(input,vAR_model):

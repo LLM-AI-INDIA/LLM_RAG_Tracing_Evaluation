@@ -1,13 +1,15 @@
 import boto3
 import os
 import streamlit as st
-from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import generate_random_string
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call_KB import generate_random_string
 import traceback
 import json
 from streamlit_chat import message
+import matplotlib.pyplot as plt
+import io
 
 
-def agent_call(vAR_user_input):
+def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
 
     if "agent_session_id" not in st.session_state:
         st.session_state.agent_session_id=generate_random_string()
@@ -17,8 +19,60 @@ def agent_call(vAR_user_input):
         client = boto3.client("bedrock-agent-runtime",aws_access_key_id=os.environ["AWS_ACCESS_KEY"],
                         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],region_name='us-west-2')
 
-        response = client.invoke_agent(
+        if vAR_file_obj and vAR_source=="UPLOAD":
+
+            response = client.invoke_agent(
         agentId=os.environ["AGENT_ID"],
+        enableTrace = True,
+        inputText=vAR_user_input,
+        agentAliasId=os.environ["AGENT_ALIAS_ID"],
+        sessionId=st.session_state.agent_session_id,
+        sessionState={
+        'files': [
+            {
+                'name': vAR_file_obj.name,
+                'source': {
+                    'byteContent': {
+                        'data': vAR_file_obj.read(),
+                        'mediaType': vAR_file_obj.type
+                    },
+                    'sourceType': 'BYTE_CONTENT'
+                },
+                'useCase': 'CODE_INTERPRETER'
+            }
+        ]
+        }
+        )
+
+        elif vAR_file_obj and vAR_source=="S3":
+
+            response = client.invoke_agent(
+        agentId=os.environ["AGENT_ID"],
+        enableTrace = True,
+        inputText=vAR_user_input,
+        agentAliasId=os.environ["AGENT_ALIAS_ID"],
+        sessionId=st.session_state.agent_session_id,
+        
+        sessionState={
+        'files': [
+            {
+                'name': "elp_response_s3.csv",
+                'source': {
+                    's3Location':{
+                        'uri':'s3://dmv-data-source-uswest/response_20240202_response_elpdor24002.csv'
+                    },
+                    
+                    'sourceType': 'S3'
+                },
+                'useCase': 'CODE_INTERPRETER'
+            }
+        ]
+        }
+        )
+        else:
+            response = client.invoke_agent(
+        agentId=os.environ["AGENT_ID"],
+        enableTrace = True,
         inputText=vAR_user_input,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
         sessionId=st.session_state.agent_session_id)
@@ -27,18 +81,47 @@ def agent_call(vAR_user_input):
 
         event_stream = response['completion']
         final_answer = None
+        vAR_trace_list = []
         try:
             for event in event_stream:
+                print("event - ",event)
                 if 'chunk' in event:
                     data = event['chunk']['bytes']
                     final_answer = data.decode('utf8')
                     print(f"Final answer ->\n{final_answer}")
                     end_event_received = True
-                elif 'trace' in event:
-                    print(json.dumps(event['trace'], indent=2))
-                else: 
-                    print("event - ",event)
-                    raise Exception("unexpected event.", event)
+                if 'trace' in event:
+                    print("Agent Trace $$ - ",json.dumps(event['trace'], indent=2))
+                    vAR_trace_obj = json.dumps(event['trace'])
+                    vAR_trace_list.append(vAR_trace_obj)
+
+                # files contains intermediate response for code interpreter if any files have been generated.
+                if 'files' in event:
+                    files = event['files']['files']
+                    for file in files:
+                        name = file['name']
+                        type = file['type']
+                        bytes_data = file['bytes']
+                        
+                        # It the file is a PNG image then we can display it...
+                        if type == 'image/png':
+                            # Display PNG image using Matplotlib
+                            # Load and plot the image using matplotlib
+                            img = plt.imread(io.BytesIO(bytes_data))
+                            fig, ax = plt.subplots(figsize=(10, 10))
+                            # ax.imshow(img)
+                            ax.axis('off')
+                            ax.set_title(name)
+                            # Display the plot in Streamlit
+                            st.pyplot(fig)
+                            
+                        # If the file is NOT a PNG then we save it to disk...
+                        else:
+                            # Save other file types to local disk
+                            with open(name, 'wb') as f:
+                                f.write(bytes_data)
+                            print(f"File '{name}' saved to disk.")
+                    
         except Exception as e:
             raise Exception("unexpected event.",e)
 
@@ -46,12 +129,12 @@ def agent_call(vAR_user_input):
         print("Agent error - ",str(e))
         print(traceback.format_exc())
 
-    return final_answer
+    return final_answer,vAR_trace_list
     
 
 
 
-def bedrock_agent_chat():
+def bedrock_agent_chat(vaR_file_obj,vAR_source):
     # Initialize session state
     if 'history_agent' not in st.session_state:
         st.session_state['history_agent'] = []
@@ -66,6 +149,9 @@ def bedrock_agent_chat():
     response_container = st.container()
     container = st.container()
 
+    if "vAR_trace_list" not in st.session_state:
+        st.session_state.vAR_trace_list = []
+
     with container:
         with st.form(key='my_agent_form', clear_on_submit=True):
             vAR_user_input = st.text_input("Prompt:", placeholder="How can I help you?", key='agent_input')
@@ -74,12 +160,15 @@ def bedrock_agent_chat():
 
 
         if submit_button and vAR_user_input and vAR_user_input!='':
-            vAR_agent_response = agent_call(vAR_user_input)
+            vAR_agent_response,vAR_trace_obj_list = agent_call(vAR_user_input,vaR_file_obj,vAR_source)
+
+            st.session_state.vAR_trace_list = vAR_trace_obj_list
 
             st.session_state['past_agent'].append(vAR_user_input)
             print("vAR_agent_response - ",vAR_agent_response)
             print("type vAR_agent_response - ",type(vAR_agent_response))
             st.session_state['generated_agent'].append(vAR_agent_response)
+
 
         if st.session_state['generated_agent']:
             with response_container:
@@ -96,4 +185,9 @@ def bedrock_agent_chat():
                             feedback_text = "thumbs up" if feedback == 1 else "thumbs down"
                             feedback_class = "thumbs-up" if feedback == 1 else "thumbs-down"
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
+                            st.write("")
+                if len(st.session_state['generated_agent'])>1:
+                    if st.button("Click Here for Trace!",key="button_key"):
+                        st.write("Tracing Details : ")
+                        st.json({"Trace Details" : st.session_state.vAR_trace_list})
 

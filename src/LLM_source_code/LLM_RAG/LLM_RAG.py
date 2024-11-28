@@ -5,7 +5,7 @@ import numpy as np
 import json
 import os
 from src.LLM_source_code.LLM_RAG.LLM_Assistant_Call import  assistant_call
-from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call import  retrieve_generated
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Call_KB import  retrieve_generated
 from src.LLM_source_code.LLM_RAG.LLM_VertexAI_Call import generate
 import datetime
 from google.cloud import bigquery
@@ -633,7 +633,9 @@ def LLM_RAG_Impl(choice):
 
     elif vAR_usecase=="Policy Guru" and choice=="LLM Agent":
 
-        with col17:
+        vAR_elp_file_upload = None
+        vAR_elp_file_s3 = None
+        with col17: 
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
@@ -648,8 +650,20 @@ def LLM_RAG_Impl(choice):
                 vAR_platform = st.selectbox(" ",("AWS Bedrock"))
                 st.write("")
 
-        
-        bedrock_agent_chat()
+        with col22:
+            st.markdown("<h3 style='font-size:16px;'>Upload Data</h3>", unsafe_allow_html=True)
+        with col24:
+            vAR_file_source = st.radio("Select File Source",["Upload File", "S3 URL"],horizontal=True)
+            if vAR_file_source=="Upload File":
+                vAR_elp_file_upload = st.file_uploader("Choose any type of file",accept_multiple_files=False)
+            else:
+                vAR_elp_file_s3 = st.text_input("Enter S3 URL")
+        if vAR_elp_file_upload:
+            bedrock_agent_chat(vAR_elp_file_upload,"UPLOAD")
+        elif vAR_elp_file_s3:
+            bedrock_agent_chat(vAR_elp_file_s3,"S3")
+        else:
+            bedrock_agent_chat(vAR_elp_file_s3,"")
             
             
   
