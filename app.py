@@ -4,7 +4,7 @@ st.set_page_config(page_title="LLM Tracing", layout="wide")
 from src.LLM_Utility.Sidemenu_initialization import All_Initialization,CSS_Property
 from src.LLM_source_code.LLM_RAG.LLM_RAG import LLM_RAG_Impl
 from src.LLM_source_code.LLM_HumanFeedbackLoop.annotation_llm import text_based
-from src.LLM_source_code.Feedback_LLM_as_a_judge.LLM_collect_feedback import response_with_feedback
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Feedback_v2 import updated_text_based
 
 import os
 
@@ -22,7 +22,7 @@ if __name__=='__main__':
     # Initializing Basic Componentes of Web Page
     choice = All_Initialization()
  
-    if choice=="LLM Guardrail" or choice=="LLM Agent":
+    if choice=="LLM Guardrail" or choice=="LLM Agent" or choice=="LLM as a Judge":
 
         LLM_RAG_Impl(choice)
 
@@ -30,9 +30,9 @@ if __name__=='__main__':
 
         text_based()
 
-    elif choice=="LLM as a Judge":
+    elif choice=="LLM Human in the Feedback Loop V2":
 
-        response_with_feedback()
+        updated_text_based()
 
     
 

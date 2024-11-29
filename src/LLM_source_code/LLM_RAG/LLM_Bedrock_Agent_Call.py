@@ -45,7 +45,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         )
 
         elif vAR_file_obj and vAR_source=="S3":
-
+            print("s3 filename - ",vAR_file_obj.split("/")[-1])
             response = client.invoke_agent(
         agentId=os.environ["AGENT_ID"],
         enableTrace = True,
@@ -56,10 +56,10 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         sessionState={
         'files': [
             {
-                'name': "elp_response_s3.csv",
+                'name': vAR_file_obj.split("/")[-1],
                 'source': {
                     's3Location':{
-                        'uri':'s3://dmv-data-source-uswest/response_20240202_response_elpdor24002.csv'
+                        'uri':vAR_file_obj
                     },
                     
                     'sourceType': 'S3'
@@ -82,16 +82,20 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         event_stream = response['completion']
         final_answer = None
         vAR_trace_list = []
+        vAR_file_generated = False
+        file_name = None
+        idx = 0
+        idx2 = 0
         try:
             for event in event_stream:
-                print("event - ",event)
+                idx +=1
+                print("idx - ",idx)
                 if 'chunk' in event:
                     data = event['chunk']['bytes']
                     final_answer = data.decode('utf8')
                     print(f"Final answer ->\n{final_answer}")
                     end_event_received = True
                 if 'trace' in event:
-                    print("Agent Trace $$ - ",json.dumps(event['trace'], indent=2))
                     vAR_trace_obj = json.dumps(event['trace'])
                     vAR_trace_list.append(vAR_trace_obj)
 
@@ -99,28 +103,32 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
                 if 'files' in event:
                     files = event['files']['files']
                     for file in files:
-                        name = file['name']
+                        file_name = file['name']
                         type = file['type']
                         bytes_data = file['bytes']
                         
                         # It the file is a PNG image then we can display it...
                         if type == 'image/png':
-                            # Display PNG image using Matplotlib
-                            # Load and plot the image using matplotlib
-                            img = plt.imread(io.BytesIO(bytes_data))
-                            fig, ax = plt.subplots(figsize=(10, 10))
-                            # ax.imshow(img)
-                            ax.axis('off')
-                            ax.set_title(name)
-                            # Display the plot in Streamlit
-                            st.pyplot(fig)
+                            # Here, we are facing some problem with plotting graphs. So, currently keeping 2 as static value, later this can be changed
+                            idx2 +=1
+                            print("idx2 - ",idx2)
+                            if idx2 ==2:
+                                # Display PNG image using Matplotlib in Streamlit
+                                img = plt.imread(io.BytesIO(bytes_data))
+                                fig, ax = plt.subplots(figsize=(10, 10))
+                                ax.imshow(img)
+                                ax.axis('off')
+                                ax.set_title(file_name)
+                                st.pyplot(fig)  # Use st.pyplot() instead of plt.show()
+                                plt.close(fig)  # Close the figure to free up memory
                             
                         # If the file is NOT a PNG then we save it to disk...
                         else:
                             # Save other file types to local disk
-                            with open(name, 'wb') as f:
+                            vAR_file_generated = True
+                            with open(file_name, 'wb') as f:
                                 f.write(bytes_data)
-                            print(f"File '{name}' saved to disk.")
+                            print(f"File '{file_name}' saved to disk.")
                     
         except Exception as e:
             raise Exception("unexpected event.",e)
@@ -129,7 +137,8 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         print("Agent error - ",str(e))
         print(traceback.format_exc())
 
-    return final_answer,vAR_trace_list
+    return final_answer,vAR_trace_list,vAR_file_generated,file_name
+        
     
 
 
@@ -148,6 +157,7 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
     # Container for the chat history
     response_container = st.container()
     container = st.container()
+    vAR_file_generated = False
 
     if "vAR_trace_list" not in st.session_state:
         st.session_state.vAR_trace_list = []
@@ -160,7 +170,7 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
 
 
         if submit_button and vAR_user_input and vAR_user_input!='':
-            vAR_agent_response,vAR_trace_obj_list = agent_call(vAR_user_input,vaR_file_obj,vAR_source)
+            vAR_agent_response,vAR_trace_obj_list,vAR_file_generated,file_name = agent_call(vAR_user_input,vaR_file_obj,vAR_source)
 
             st.session_state.vAR_trace_list = vAR_trace_obj_list
 
@@ -190,4 +200,18 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                     if st.button("Click Here for Trace!",key="button_key"):
                         st.write("Tracing Details : ")
                         st.json({"Trace Details" : st.session_state.vAR_trace_list})
+                        st.write("")
+                if vAR_file_generated:
+                    # Read the file content
+                    with open(file_name, "rb") as file:
+                        file_content = file.read()
+
+                    # Button to download the file
+                    st.download_button(
+                        label="Download File",             # Label on the button
+                        data=file_content,                 # File content to download
+                        file_name=file_name,               # Default file name
+                        mime="text/plain"                  # MIME type
+                    )
+
 

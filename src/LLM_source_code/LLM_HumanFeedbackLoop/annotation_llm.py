@@ -16,6 +16,7 @@ biq_query_client = bigquery.Client()
 table_id = os.getenv("BIGQUERY_TABLE_ID")
 
 
+
 def assistant_call_with_annotation(user_input):
     try:
         # Initialize the Azure OpenAI client
