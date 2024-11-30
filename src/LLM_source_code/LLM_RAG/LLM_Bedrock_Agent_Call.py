@@ -115,7 +115,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
                             if idx2 ==2:
                                 # Display PNG image using Matplotlib in Streamlit
                                 img = plt.imread(io.BytesIO(bytes_data))
-                                fig, ax = plt.subplots(figsize=(10, 10))
+                                fig, ax = plt.subplots(figsize=(5, 5))
                                 ax.imshow(img)
                                 ax.axis('off')
                                 ax.set_title(file_name)
@@ -177,6 +177,7 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
             st.session_state['past_agent'].append(vAR_user_input)
             print("vAR_agent_response - ",vAR_agent_response)
             print("type vAR_agent_response - ",type(vAR_agent_response))
+            print("st.session_state.vAR_trace_list - ",st.session_state.vAR_trace_list)
             st.session_state['generated_agent'].append(vAR_agent_response)
 
 
