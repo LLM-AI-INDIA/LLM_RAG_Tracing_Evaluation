@@ -639,14 +639,14 @@ def LLM_RAG_Impl(choice):
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
-            vAR_model = st.selectbox(" ",("claude-3.5-sonnet(Bedrock)"))
+            vAR_model = st.selectbox(" ",("claude-3-sonnet(Bedrock)"))
             st.write("")
 
         with col7:
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
-            if vAR_model=="claude-3.5-sonnet(Bedrock)":
+            if vAR_model=="claude-3-sonnet(Bedrock)":
                 vAR_platform = st.selectbox(" ",("AWS Bedrock"))
                 st.write("")
 

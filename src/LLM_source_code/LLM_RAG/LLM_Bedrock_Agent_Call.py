@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import io
 
 
+MEMORY_ID = "ABCDEFGHIJ987654321"
+
 def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
 
     if "agent_session_id" not in st.session_state:
@@ -23,6 +25,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
 
             response = client.invoke_agent(
         agentId=os.environ["AGENT_ID"],
+        memoryId = MEMORY_ID,
         enableTrace = True,
         inputText=vAR_user_input,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
@@ -48,6 +51,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
             print("s3 filename - ",vAR_file_obj.split("/")[-1])
             response = client.invoke_agent(
         agentId=os.environ["AGENT_ID"],
+        memoryId = MEMORY_ID,
         enableTrace = True,
         inputText=vAR_user_input,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
@@ -72,6 +76,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         else:
             response = client.invoke_agent(
         agentId=os.environ["AGENT_ID"],
+        memoryId = MEMORY_ID,
         enableTrace = True,
         inputText=vAR_user_input,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
@@ -158,6 +163,7 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
     response_container = st.container()
     container = st.container()
     vAR_file_generated = False
+    vAR_delete_memory = None
 
     if "vAR_trace_list" not in st.session_state:
         st.session_state.vAR_trace_list = []
@@ -202,6 +208,12 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                         st.write("Tracing Details : ")
                         st.json({"Trace Details" : st.session_state.vAR_trace_list})
                         st.write("")
+
+                    vAR_delete_memory = st.radio("Do you want to Delete Memory?",["No","Yes"],horizontal=True)
+                    if vAR_delete_memory=="Yes":
+                        delete_memory()
+                        st.info("Memory successfully deleted!")
+
                 if vAR_file_generated:
                     # Read the file content
                     with open(file_name, "rb") as file:
@@ -216,3 +228,21 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                     )
 
 
+
+
+
+def delete_memory():
+
+    
+    try:
+        client = boto3.client("bedrock-agent-runtime",aws_access_key_id=os.environ["AWS_ACCESS_KEY"],
+                        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],region_name='us-west-2')
+        response = client.delete_agent_memory(
+            agentId=os.environ["AGENT_ID"],
+            agentAliasId=os.environ["AGENT_ALIAS_ID"],
+            memoryId = MEMORY_ID
+        )
+        print("Memory successfully deleted!")
+    except Exception as e:
+        print("error in delete memory - ",str(e))
+        return None
