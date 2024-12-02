@@ -32,8 +32,7 @@ from phoenix.evals import (
 )
 from phoenix.session.evaluation import get_qa_with_reference, get_retrieved_documents
 from src.LLM_source_code.LLM_RAG.LLM_Custom_Eval import Custom_Eval_Context_Precision,Custom_Eval_Context_Recall
-
-
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Agent_Call import delete_memory
 
 
 
@@ -635,6 +634,7 @@ def LLM_RAG_Impl(choice):
 
         vAR_elp_file_upload = None
         vAR_elp_file_s3 = None
+        vAR_delete_memory = None
         with col17: 
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
@@ -658,6 +658,19 @@ def LLM_RAG_Impl(choice):
                 vAR_elp_file_upload = st.file_uploader("Choose any type of file",accept_multiple_files=False)
             else:
                 vAR_elp_file_s3 = st.text_input("Enter S3 URL")
+
+        with col7:
+            st.write("")
+            st.write("")
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Do you want to Delete Memory?</h3>", unsafe_allow_html=True)
+        with col9:
+            st.write("")
+            vAR_delete_memory = st.radio("Select Anyone",["No","Yes"],horizontal=True)
+            if vAR_delete_memory=="Yes":
+                delete_memory()
+                st.info("Memory successfully deleted!")
+
         if vAR_elp_file_upload:
             bedrock_agent_chat(vAR_elp_file_upload,"UPLOAD")
         elif vAR_elp_file_s3:

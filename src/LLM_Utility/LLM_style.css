@@ -95,3 +95,7 @@ button.st-emotion-cache-1vt4y43.ef3psqc16 {
     color: white;
     background-color: #ed3333;
 }
+
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(14) > div:nth-child(1) > div > div > div > div.stElementContainer.element-container.st-key-button_key.st-emotion-cache-iyw1lb.e1f1d6gn4 > div > button{
+    padding: left 7%;
+}

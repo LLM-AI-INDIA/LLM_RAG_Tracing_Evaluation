@@ -11,7 +11,7 @@ import io
 
 MEMORY_ID = "ABCDEFGHIJ987654321"
 
-def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
+def agent_call(vAR_user_input,vAR_file_obj,vAR_source,end_session=False):
 
     if "agent_session_id" not in st.session_state:
         st.session_state.agent_session_id=generate_random_string()
@@ -29,6 +29,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         enableTrace = True,
         inputText=vAR_user_input,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
+        endSession = end_session,
         sessionId=st.session_state.agent_session_id,
         sessionState={
         'files': [
@@ -54,6 +55,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         memoryId = MEMORY_ID,
         enableTrace = True,
         inputText=vAR_user_input,
+        endSession = end_session,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
         sessionId=st.session_state.agent_session_id,
         
@@ -79,6 +81,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source):
         memoryId = MEMORY_ID,
         enableTrace = True,
         inputText=vAR_user_input,
+        endSession = end_session,
         agentAliasId=os.environ["AGENT_ALIAS_ID"],
         sessionId=st.session_state.agent_session_id)
         
@@ -164,6 +167,10 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
     container = st.container()
     vAR_file_generated = False
     vAR_delete_memory = None
+    vAR_memory_content = None
+
+    col1,col2,col3 = st.columns([5,2,5])
+    col4,col5,col6 = st.columns([1,8,1])
 
     if "vAR_trace_list" not in st.session_state:
         st.session_state.vAR_trace_list = []
@@ -203,16 +210,33 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                             feedback_class = "thumbs-up" if feedback == 1 else "thumbs-down"
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
                             st.write("")
+                            st.write("")
                 if len(st.session_state['generated_agent'])>1:
-                    if st.button("Click Here for Trace!",key="button_key"):
-                        st.write("Tracing Details : ")
-                        st.json({"Trace Details" : st.session_state.vAR_trace_list})
-                        st.write("")
+                    with col1:
+                        if st.button("Click Here for Trace!",key="button_key"):
 
-                    vAR_delete_memory = st.radio("Do you want to Delete Memory?",["No","Yes"],horizontal=True)
-                    if vAR_delete_memory=="Yes":
-                        delete_memory()
-                        st.info("Memory successfully deleted!")
+                            with col5:
+                                st.json({"Trace Details" : st.session_state.vAR_trace_list})
+                                st.write("")
+                                st.write("")        
+                    with col1:
+                        st.write("")
+                        st.write("")
+                        if st.button("Show Memory Content",key="memory_button"):
+                            vAR_memory_content = get_memory()
+                            st.info(vAR_memory_content)
+                    with col3:
+                     
+                        vAR_end_session = st.radio("Do you want to end the Session?",["No","Yes"],horizontal=True)
+                        if vAR_end_session=="Yes":
+                            agent_call("End","","",end_session=True)
+                            st.info("Session Ended!")
+                            st.write("")
+
+
+                        
+
+                    
 
                 if vAR_file_generated:
                     # Read the file content
@@ -246,3 +270,25 @@ def delete_memory():
     except Exception as e:
         print("error in delete memory - ",str(e))
         return None
+    
+
+def get_memory():
+
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+    client = boto3.client("bedrock-agent-runtime",aws_access_key_id=os.environ["AWS_ACCESS_KEY"],
+                        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],region_name='us-west-2')
+    response = client.get_agent_memory(
+        agentId=os.environ["AGENT_ID"],
+        agentAliasId=os.environ["AGENT_ALIAS_ID"],
+        memoryId=MEMORY_ID,
+        memoryType='SESSION_SUMMARY',
+    )
+    memory = ""
+    for content in response['memoryContents']:
+        if 'sessionSummary' in content:
+            s = content['sessionSummary']
+            memory += f"Session ID {s['sessionId']} from {s['sessionStartTime'].strftime(DATE_FORMAT)} to {s['sessionExpiryTime'].strftime(DATE_FORMAT)}\n"
+            memory += s['summaryText'] + "\n"
+    if memory == "":
+        memory = "<no memory>"
+    return memory
