@@ -5,15 +5,19 @@ from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.query import get_expected_resp
 from src.LLM_source_code.LLM_HumanFeedbackLoop.model import Azure_model_for_human_in_the_loop
 from src.LLM_source_code.LLM_HumanFeedbackLoop.annotation_llm import assistant_call_with_annotation
 from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.reset import Update_vector
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Langchain_Call import langchain_rag
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Eval_Model import multiturn_generate_content_rel,multiturn_generate_content_indirect
 import os
+import time
 import re
 import shutil
 from docx import Document
-import time
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Langchain_Call import append_to_vectorstore,reset_vectorstore
 
 def updated_text_based():
     w1, col1, w2, col2, w3 = st.columns([1, 5, 1, 5, 1]) 
     m1, m2, m3 = st.columns([0.2, 8, 0.2])
+    m4, m5, m6 = st.columns([0.2, 8, 0.2])
     # Update_vector()
     # Row 1: Select Use Case
     with col1:
@@ -25,7 +29,7 @@ def updated_text_based():
     with col1:
         st.markdown("<div style='height:5.3rem; line-height:5.3rem; font-weight: bold;'>Select LLM</div>", unsafe_allow_html=True)
     with col2:
-        vAR_model = st.selectbox(" ", ("gpt-4o(Azure OpenAI)"  ))
+        vAR_model = st.selectbox(" ", ("All","gpt-4o(Azure OpenAI)", "Langchain(OpenAI)"  ))
 
     # Row 3: Select Platform
     with col1:
@@ -43,12 +47,12 @@ def updated_text_based():
         elif vAR_model == "Azure OpenAI(Langchain)":
             vAR_platform = st.selectbox(" ", ("Langchain",))
 
-    # # Row 4: Select LLM as a Judge Model
-    # with col1:
-    #     st.markdown("<div style='height:5.1rem; line-height:5.1rem; font-weight: bold;'>Select LLM as a Judge Model (Evaluator)</div>", 
-    #                 unsafe_allow_html=True)
-    # with col2:
-    #     vAR_eval_llm = st.selectbox(" ", ("GPT(Default)", "Claude", "Gemini"))
+    # Row 4: Select LLM as a Judge Model
+    with col1:
+        st.markdown("<div style='height:5.1rem; line-height:5.1rem; font-weight: bold;'>Select LLM as a Judge Model (Evaluator)</div>", 
+                    unsafe_allow_html=True)
+    with col2:
+        vAR_eval_llm = st.selectbox(" ", ("Gemini", "GPT", "Claude"))
 
     # # Row 5: Select LLM as a Judge Type
     # with col1:
@@ -74,7 +78,16 @@ def updated_text_based():
             st.session_state["prompt"] = None
         if "first_response" not in st.session_state:
             st.session_state["first_response"] = None
-
+        if "langchain_response" not in st.session_state:
+            st.session_state["langchain_response"] = None
+        if "expected_response" not in st.session_state:
+            st.session_state["expected_response"] = None
+        if "langchain_reference" not in st.session_state:
+            st.session_state["langchain_reference"] = None
+        if "feedback_openai" not in st.session_state:
+            st.session_state["feedback_openai"] = None
+        if "present_langchain_reference" not in st.session_state:
+            st.session_state["present_langchain_reference"] = None
 
         # Add custom CSS for styling chat
         st.markdown(
@@ -122,136 +135,303 @@ def updated_text_based():
                     st.write(f"### {message['table_heading']}")
                 if "table" in message:
                     st.table(message["table"])
-                
                 if "feedback_table_heading" in message:
                     st.write(f"### {message['feedback_table_heading']}")
                 if "feedback_table" in message:
                     st.table(message["feedback_table"])
                 
-
                 # Collect feedback for assistant responses
                 if i > 1 and i not in st.session_state.feedback_given:
-                    feedback_ = streamlit_feedback(
-                        align="flex-start",
-                        feedback_type="thumbs",
-                        optional_text_label="[Optional] Please provide an explanation",
-                        key=f"thumbs_{i}"
-                    )
-
-                    if feedback_:
-                        # Parse feedback details
-                        feedback_score = feedback_.get("score", "neutral")
-                        feedback_text = feedback_.get("text", "")
-                        st.session_state.feedback_given.add(i)
-                        
-                        if feedback_score == "👎":
-                            # Handle thumbs-down feedback
-                            prompt = st.session_state['prompt']
-
-                            response = st.session_state['first_response']
-                            improved_response = Azure_model_for_human_in_the_loop(prompt, response, feedback_score, feedback_text)
-                            st.session_state["improved_response"] = improved_response
-                            project_id = "elp-2022-352222"
-                            dataset_id = "DMV_ELP"
-                            table_name = "prompt_and_response"
-
-                            expected_response = get_expected_response(project_id, dataset_id, table_name, prompt)
-                                
-                            data_2 = {
-                                "Prompt": [prompt],
-                                "Expected Response": [expected_response],
-                                "GPT Response": [response],
-                                "Label" : [feedback_score],
-                                "Feedback" : [feedback_text] 
-                            }
-                            step_2 = pd.DataFrame(data_2)
-                            step_3 = step_2.copy()
-                            step_3["Optimized LLM Response"] = improved_response
+                    selected_option = st.radio("Choose the model to give feedback:", options=["OpenAI", "Langchain", "Both"], horizontal=True ,key=f"radio_{i}" )
+                    if selected_option == "OpenAI":
+                        feedback_ = streamlit_feedback(
+                            align="flex-start",
+                            feedback_type="thumbs",
+                            optional_text_label="[Optional] Please provide an explanation",
+                            key=f"thumbs_{i}"
+                        )
+                        if feedback_:
+                            # Parse feedback details
+                            feedback_score = feedback_.get("score", "neutral")
+                            feedback_text = feedback_.get("text", "")
+                            st.session_state.feedback_given.add(i)
                             
-                            # Append improved response and tables with headings
-                            st.session_state.messages.append(
-                                {
-                                    "role": "assistant",
-                                    "content": "",
-                                    "table_heading": "Human-in-the-Loop (HITL):",
-                                    "table": step_2,
-                                    "feedback_table_heading": "Optimized LLM response based on human feedback:",
-                                    "feedback_table": step_3,
+                            if feedback_score == "👎":
+                                # Handle thumbs-down feedback
+                                prompt = st.session_state['prompt']
+
+                                response = st.session_state['first_response']
+                                improved_response = Azure_model_for_human_in_the_loop(prompt, response, feedback_score, feedback_text)
+                                st.session_state["improved_response"] = improved_response
+                                    
+                                data_2 = {
+                                    "Prompt": [prompt],
+                                    "Expected Response": [st.session_state["expected_response"]],
+                                    "GPT Response": [response],
+                                    "GPT (Langchain)": [st.session_state["langchain_response"]],
+                                    "Label" : [feedback_score],
+                                    "Feedback" : [feedback_text] 
                                 }
-                            )
-                            
-                        if feedback_score == "👍":
-                            user_message = st.session_state['prompt']
-                            assistant_message = st.session_state["improved_response"] 
-                            
-
-                            if not st.session_state.file_copied:
-                                try:
-                                    source_file = "DMV_FAQ.docx"
-                                    destination_file = "DMV_FAQ_copy.docx"
-                                    shutil.copy(source_file, destination_file)
-                                    st.session_state.file_copied = True
-                                except Exception as e:
-                                    st.error(f"Error during file operations: {e}")
-
-                            file_path = "DMV_FAQ_copy.docx"
-                            text = f"\n\n{user_message}\n\n{assistant_message}"
-
-                            print("************",text)
-
-                            # Update the .docx file
-                            doc = Document(file_path)
-                            doc.add_paragraph(text)
-                            doc.save(file_path)
-
-                            # Update vector store
-                            vector_store_files = st.session_state.client.beta.vector_stores.files.list(
-                                vector_store_id=os.getenv("VECTOR_STORE_ID")
-                            )
-                            if vector_store_files.data:
-                                file_ids = vector_store_files.data[0].id
-                                st.session_state.client.beta.vector_stores.files.delete(
-                                    vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
+                                step_2 = pd.DataFrame(data_2)
+                                step_3 = step_2.copy()
+                                step_3["Optimized LLM Response"] = improved_response
+                                
+                                # Append improved response and tables with headings
+                                st.session_state.messages.append(
+                                    {
+                                        "role": "assistant",
+                                        "content": "",
+                                        "table_heading": "Human-in-the-Loop (HITL):",
+                                        "table": step_2,
+                                        "feedback_table_heading": "Optimized LLM response based on human feedback:",
+                                        "feedback_table": step_3,
+                                    }
                                 )
+                                
+                            if feedback_score == "👍":
+                                user_message = st.session_state['prompt']
+                                assistant_message = st.session_state["improved_response"] 
+                                if not st.session_state.file_copied:
+                                    try:
+                                        source_file = "DMV_FAQ.docx"
+                                        destination_file = "DMV_FAQ_copy.docx"
+                                        shutil.copy(source_file, destination_file)
+                                        st.session_state.file_copied = True
+                                    except Exception as e:
+                                        st.error(f"Error during file operations: {e}")
 
-                            response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
-                            file_id = response.id
-                            st.session_state.client.beta.vector_stores.files.create(
-                                vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
-                            )
-                            st.session_state.thread = st.session_state.client.beta.threads.create()
+                                file_path = "DMV_FAQ_copy.docx"
+                                text = f"\n\n{user_message}\n\n{assistant_message}"
 
-                            st.write("User Feedback has been successfully saved to the OpenAI Vector Database")
+                                # Update the .docx file
+                                doc = Document(file_path)
+                                doc.add_paragraph(text)
+                                doc.save(file_path)
+                                # Update vector store
+                                vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+                                    vector_store_id=os.getenv("VECTOR_STORE_ID")
+                                )
+                                if vector_store_files.data:
+                                    file_ids = vector_store_files.data[0].id
+                                    st.session_state.client.beta.vector_stores.files.delete(
+                                        vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
+                                    )
+                                response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
+                                file_id = response.id
+                                st.session_state.client.beta.vector_stores.files.create(
+                                    vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
+                                )
+                                st.session_state.thread = st.session_state.client.beta.threads.create()
+                                st.write("User Feedback has been successfully saved to the OpenAI Vector Database")
+                    if selected_option == "Langchain":
+                        feedback_ = streamlit_feedback(
+                            align="flex-start",
+                            feedback_type="thumbs",
+                            optional_text_label="[Optional] Please provide an explanation",
+                            key=f"thumbs_{i}"
+                        )
+                        if feedback_:
+                            # Parse feedback details
+                            feedback_score = feedback_.get("score", "neutral")
+                            feedback_text = feedback_.get("text", "")
+                            st.session_state.feedback_given.add(i)
+                            
+                            if feedback_score == "👎":
+                                # Handle thumbs-down feedback
+                                prompt = st.session_state['prompt']
 
-        # Capture user input
+                                response = st.session_state['first_response']
+                                improved_response = Azure_model_for_human_in_the_loop(prompt, response, feedback_score, feedback_text)
+                                st.session_state["improved_response"] = improved_response
+                                                                    
+                                data_2 = {
+                                    "Prompt": [prompt],
+                                    "Expected Response": [st.session_state["expected_response"]],
+                                    "GPT Response": [response],
+                                    "GPT (Langchain)": [st.session_state["langchain_response"]],
+                                    "Label" : [feedback_score],
+                                    "Feedback" : [feedback_text] 
+                                }
+                                step_2 = pd.DataFrame(data_2)
+                                step_3 = step_2.copy()
+                                step_3["Optimized LLM Response"] = improved_response
+                                
+                                # Append improved response and tables with headings
+                                st.session_state.messages.append(
+                                    {
+                                        "role": "assistant",
+                                        "content": "",
+                                        "table_heading": "Human-in-the-Loop (HITL):",
+                                        "table": step_2,
+                                        "feedback_table_heading": "Optimized LLM response based on human feedback:",
+                                        "feedback_table": step_3,
+                                    }
+                                )
+                            
+                            if feedback_score == "👍":
+                                user_message = st.session_state['prompt']
+                                assistant_message = st.session_state["improved_response"] 
+                                text = f"\n\n{user_message}\n\n{assistant_message}"
+                                append_to_vectorstore(text)
+                                st.write("User Feedback has been successfully saved to the Chroma Vector Database")
+
+                    if selected_option == "Both":
+                        feedback_ = streamlit_feedback(
+                            align="flex-start",
+                            feedback_type="thumbs",
+                            optional_text_label="[Optional] Please provide an explanation for OpenAI",
+                            key=f"thumbs_{i}"
+                        )
+                        st.session_state["feedback_openai"] = feedback_
+                        
+                        if feedback_:
+                            # Parse feedback details
+                            feedback_score = feedback_.get("score", "neutral")
+                            feedback_text = feedback_.get("text", "")
+                            st.session_state.feedback_given.add(i)
+                            
+                            if feedback_score == "👎":
+                                # Handle thumbs-down feedback
+                                prompt = st.session_state['prompt']
+
+                                response = st.session_state['first_response']
+                                improved_response = Azure_model_for_human_in_the_loop(prompt, response, feedback_score, feedback_text)
+                                st.session_state["improved_response"] = improved_response
+                                    
+                                data_2 = {
+                                    "Prompt": [prompt],
+                                    "Expected Response": [st.session_state["expected_response"]],
+                                    "GPT Response": [response],
+                                    "GPT (Langchain)": [st.session_state["langchain_response"]],
+                                    "Label" : [feedback_score],
+                                    "Feedback" : [feedback_text] 
+                                }
+                                step_2 = pd.DataFrame(data_2)
+                                step_3 = step_2.copy()
+                                step_3["Optimized LLM Response"] = improved_response
+                                
+                                # Append improved response and tables with headings
+                                st.session_state.messages.append(
+                                    {
+                                        "role": "assistant",
+                                        "content": "",
+                                        "table_heading": "Human-in-the-Loop (HITL):",
+                                        "table": step_2,
+                                        "feedback_table_heading": "Optimized LLM response based on human feedback:",
+                                        "feedback_table": step_3,
+                                    }
+                                )
+                                
+                            if feedback_score == "👍":
+                                user_message = st.session_state['prompt']
+                                assistant_message = st.session_state["improved_response"] 
+                                if not st.session_state.file_copied:
+                                    try:
+                                        source_file = "DMV_FAQ.docx"
+                                        destination_file = "DMV_FAQ_copy.docx"
+                                        shutil.copy(source_file, destination_file)
+                                        st.session_state.file_copied = True
+                                    except Exception as e:
+                                        st.error(f"Error during file operations: {e}")
+
+                                file_path = "DMV_FAQ_copy.docx"
+                                text = f"\n\n{user_message}\n\n{assistant_message}"
+
+                                # Update the .docx file
+                                doc = Document(file_path)
+                                doc.add_paragraph(text)
+                                doc.save(file_path)
+                                # Update vector store
+                                vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+                                    vector_store_id=os.getenv("VECTOR_STORE_ID")
+                                )
+                                if vector_store_files.data:
+                                    file_ids = vector_store_files.data[0].id
+                                    st.session_state.client.beta.vector_stores.files.delete(
+                                        vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
+                                    )
+                                response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
+                                file_id = response.id
+                                st.session_state.client.beta.vector_stores.files.create(
+                                    vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
+                                )
+                                st.session_state.thread = st.session_state.client.beta.threads.create()
+                                # st.write("User Feedback has been successfully saved to the OpenAI Vector Database")
+                                append_to_vectorstore(text)
+                                st.write("User Feedback has been successfully saved to the OpenAI and Chroma Vector Database")
+                                st.session_state["improved_response"] = None
+
+    # Capture user input
+    with m2:
         prompt = st.chat_input("What else can I do to help?")
-        if prompt:
-            st.session_state["prompt"] = prompt
-            # Append user message
-            st.session_state.messages.append({"role": "user", "content": prompt})
+    if prompt:
+        st.session_state["prompt"] = prompt
+        # Append user message
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # Generate assistant response with a table
-            response_text = assistant_call_with_annotation(prompt)
-            st.session_state["first_response"] = response_text
-            project_id = "elp-2022-352222"
-            dataset_id = "DMV_ELP"
-            table_name = "prompt_and_response"
+        # Generate assistant response with a table
+        response_text = assistant_call_with_annotation(prompt)
+        st.session_state["first_response"] = response_text
+        project_id = "elp-2022-352222"
+        dataset_id = "DMV_ELP"
+        table_name = "prompt_and_response"
 
-            expected_response = get_expected_response(project_id, dataset_id, table_name, prompt)
-                
-            data = {
-                "Prompt": [prompt],
-                "Expected Response": [expected_response],
-                "GPT Response": [response_text]
+        expected_response = get_expected_response(project_id, dataset_id, table_name, prompt)
+        st.session_state["expected_response"] = expected_response
+        langchain_response, langchain_reference = langchain_rag(st.session_state["prompt"])
+        st.session_state["langchain_reference"] = langchain_reference
+        
+        st.session_state["langchain_response"] = langchain_response
+        data = {
+            "Prompt": [st.session_state["prompt"]],
+            "Expected Response": [st.session_state["expected_response"]],
+            "GPT Response": [st.session_state["first_response"]],
+            "GPT (Langchain)": [st.session_state["langchain_response"]]
+
+        }
+        step_1 = pd.DataFrame(data)
+        st.session_state.messages.append({"role": "assistant", "content": "", "table_heading": "Model Response:","table": step_1})
+        st.rerun()
+    
+    
+    if st.session_state["langchain_reference"] != None:
+        if st.session_state["langchain_reference"] != st.session_state["present_langchain_reference"] or st.session_state["improved_response"] != None:
+            data_eval_lang = {
+                "input_prompt": [st.session_state["prompt"]],
+                "response": [st.session_state["first_response"]],
+                "reference_text": [st.session_state["langchain_reference"]],
+                "model":["Langchain"]
             }
-            step_1 = pd.DataFrame(data)
-            st.session_state.messages.append({"role": "assistant", "content": "", "table_heading": "Model Response:","table": step_1})
-
-            st.rerun()
+            data_eval_1 = pd.DataFrame(data_eval_lang)
+            data_eval_openai = {
+                "input_prompt": [st.session_state["prompt"]],
+                "response": [st.session_state["first_response"]],
+                "reference_text": [st.session_state["langchain_reference"]],
+                "model":["OpenAI"]
+            }
+            data_eval_2 = pd.DataFrame(data_eval_openai)
+            
+            vAR_eval_df1_rel = multiturn_generate_content_rel(data_eval_1)
+            vAR_eval_df1_indirect = multiturn_generate_content_indirect(data_eval_1)
+            vAR_eval_df2_rel = multiturn_generate_content_rel(data_eval_2)
+            vAR_eval_df2_indirect = multiturn_generate_content_indirect(data_eval_2)
+            with m5:
+                concatenated_df = pd.concat([vAR_eval_df1_rel, vAR_eval_df1_indirect,vAR_eval_df2_rel,vAR_eval_df2_indirect], ignore_index=True)
+                st.write("### Model Evaluation:")
+                st.table(concatenated_df)
+            st.session_state["present_langchain_reference"] = st.session_state["langchain_reference"]
+        
+    with m2:
         if st.button("Reset KnowledgeBase"):
-            Update_vector()
-            st.session_state.thread = st.session_state.client.beta.threads.create()
-            st.write("KnowledgeBase successfully reset")
-            time.sleep(2)
-            st.rerun() 
+            try:
+                Update_vector()
+                reset_vectorstore("DMV_FAQ.docx")
+                st.session_state.thread = st.session_state.client.beta.threads.create()
+                st.write("KnowledgeBase successfully reset")
+                time.sleep(2)
+                st.rerun()
+            except PermissionError:
+                st.warning("There is a problem resetting the knowledge base. Kindly refresh and try again.")
+            
+            
 

@@ -41,6 +41,7 @@ def Update_vector():
             )
 
             st.session_state.file_deleted = True
+            # st.session_state.thread = st.session_state.client.beta.threads.create()
             print("Base File Updated")
         except Exception as e:
             st.error(f"Error updating vector store: {e}")
