@@ -22,7 +22,7 @@ if __name__=='__main__':
     # Initializing Basic Componentes of Web Page
     choice = All_Initialization()
  
-    if choice=="LLM Guardrail" or choice=="LLM Agent" or choice=="LLM as a Judge":
+    if choice=="LLM Guardrail" or choice=="LLM Agent" or choice=="LLM as a Judge" or choice=="LLM Multi Agent":
 
         LLM_RAG_Impl(choice)
 

@@ -19,6 +19,7 @@ import multiprocessing as mp
 from functools import partial
 from multiprocessing import Pool
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Agent_Call import bedrock_agent_chat
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_MultiAgent_Call import bedrock_multi_agent_chat
 
 
 
@@ -677,7 +678,28 @@ def LLM_RAG_Impl(choice):
             bedrock_agent_chat(vAR_elp_file_s3,"S3")
         else:
             bedrock_agent_chat(vAR_elp_file_s3,"")
+
+
+    elif vAR_usecase=="Policy Guru" and choice=="LLM Multi Agent":
+        
+        with col17: 
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
+        with col19:
+            vAR_model = st.selectbox(" ",("claude-3.5-sonnet(Bedrock)"))
+            st.write("")
+
+        with col7:
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
+        with col9:
+            if vAR_model=="claude-3.5-sonnet(Bedrock)":
+                vAR_platform = st.selectbox(" ",("AWS Bedrock"))
+                st.write("")
+
             
+        if vAR_model and vAR_platform:
+            bedrock_multi_agent_chat()
             
   
 
