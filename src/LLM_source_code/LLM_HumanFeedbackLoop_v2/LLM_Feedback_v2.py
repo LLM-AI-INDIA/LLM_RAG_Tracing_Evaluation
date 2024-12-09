@@ -44,7 +44,7 @@ def updated_text_based():
             vAR_platform = st.selectbox(" ", ("AWS Bedrock",))
         elif vAR_model == "gemini-1.5(Vertex AI)":
             vAR_platform = st.selectbox(" ", ("Vertex AI(Gemini)",))
-        elif vAR_model == "Azure OpenAI(Langchain)":
+        elif vAR_model == "Langchain(OpenAI)":
             vAR_platform = st.selectbox(" ", ("Langchain",))
 
     # Row 4: Select LLM as a Judge Model
@@ -424,6 +424,7 @@ def updated_text_based():
     with m2:
         if st.button("Reset KnowledgeBase"):
             try:
+                # st.session_state.clear()
                 Update_vector()
                 reset_vectorstore("DMV_FAQ.docx")
                 st.session_state.thread = st.session_state.client.beta.threads.create()
