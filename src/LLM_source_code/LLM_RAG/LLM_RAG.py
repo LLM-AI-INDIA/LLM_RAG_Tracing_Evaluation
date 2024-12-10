@@ -479,6 +479,9 @@ def LLM_RAG_Impl(choice):
     col11,col12,col13,col14,col15 = st.columns([1,5,1,5,1])
     col26,col27,col28,col29,col30 = st.columns([1,5,1,5,1])
 
+    col31,col32,col33 = st.columns([1,8,1])
+
+
 
     vAR_model = None
     vAR_questions = None
@@ -686,16 +689,29 @@ def LLM_RAG_Impl(choice):
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
         with col19:
-            vAR_model = st.selectbox(" ",("claude-3.5-sonnet(Bedrock)"))
+            vAR_model = st.selectbox(" ",("Claude-3.5-sonnet(Supervisor & Collaborator Agent)"))
             st.write("")
 
         with col7:
             st.write("")
             st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
         with col9:
-            if vAR_model=="claude-3.5-sonnet(Bedrock)":
+            if vAR_model:
                 vAR_platform = st.selectbox(" ",("AWS Bedrock"))
                 st.write("")
+        with col32:
+            data = {
+        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
+        "Agent Role": ["Supervisor", "Collaborator", "Collaborator"],
+        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
+        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
+    }
+
+            # Create the DataFrame
+            df = pd.DataFrame(data)
+
+            st.table(df)
+
 
             
         if vAR_model and vAR_platform:
