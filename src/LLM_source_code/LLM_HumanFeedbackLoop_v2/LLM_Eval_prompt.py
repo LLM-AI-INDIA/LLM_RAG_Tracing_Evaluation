@@ -58,3 +58,68 @@ def prompt_template_IndirectAttack(df):
     return prompt
 
 
+def prompt_template_faithfulness(df):
+    # Example for generating faithfulness evaluation prompts using f-strings in a dataframe
+    
+    for index, row in df.iterrows():
+        input_prompt = row['input_prompt']
+        response = row['response']
+        reference_text = row['reference_text']
+        model = row['model']
+        
+        # Generate the prompt using f-strings
+        prompt = f'''
+    You are an evaluator tasked with assessing the faithfulness of a given response to an input prompt, using a reference text as the basis for evaluation. Faithfulness measures how accurately the response aligns with the factual content and details provided in the reference text.
+
+    **Inputs:**
+    - **Input Prompt:** {input_prompt}
+    - **Response:** {response}
+    - **Reference Text:** {reference_text}
+
+    **Task:**
+    Evaluate the response based on its faithfulness to the reference text. Specifically, determine if the response provides information that is factually consistent with the reference text. Provide:
+    1. **Faithfulness Score:** Either **1** (faithful) or **0** (not faithful).
+    2. **Reasoning:** A brief explanation (2-3 sentences) supporting the score, focusing on discrepancies or matches between the response and the reference text.
+
+    **Guidelines for Evaluation:**
+    - **Faithful:** The response accurately reflects facts or ideas present in the reference text without adding incorrect or unsupported details.
+    - **Not Faithful:** The response introduces errors, unsupported information, or contradicts the reference text.
+
+    **Output Format:**
+    **Faithfulness Score:** [0 or 1]
+    **Reasoning:** [Your reasoning here.]
+        '''
+    return prompt
+
+def prompt_template_answer_correctness(df):
+    # Example for generating answer correctness evaluation prompts using f-strings in a dataframe
+    
+    for index, row in df.iterrows():
+        input_prompt = row['input_prompt']
+        response = row['response']
+        reference_text = row['reference_text']
+        model = row['model']
+        
+        # Generate the prompt using f-strings
+        prompt = f'''
+    You are an evaluator tasked with assessing the correctness of a given response to an input prompt, using a reference text for validation. Correctness measures whether the response accurately answers the question or task posed in the input prompt.
+
+    **Inputs:**
+    - **Input Prompt:** {input_prompt}
+    - **Response:** {response}
+    - **Reference Text:** {reference_text}
+
+    **Task:**
+    Evaluate the response based on its correctness in addressing the input prompt. Specifically, assess whether the response provides accurate, complete, and appropriate information. Provide:
+    1. **Correctness Score:** Either **1** (correct) or **0** (incorrect).
+    2. **Reasoning:** A brief explanation (2-3 sentences) supporting the score, focusing on why the response is correct or incorrect.
+
+    **Guidelines for Evaluation:**
+    - **Correct:** The response fully and accurately answers the input prompt based on the reference text, without including irrelevant, incorrect, or unsupported details.
+    - **Incorrect:** The response contains errors, omits critical information, or fails to address the input prompt appropriately.
+
+    **Output Format:**
+    **Correctness Score:** [0 or 1]
+    **Reasoning:** [Your reasoning here.]
+        '''
+    return prompt
