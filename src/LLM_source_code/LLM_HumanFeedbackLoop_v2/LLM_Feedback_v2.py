@@ -13,6 +13,7 @@ import re
 import shutil
 from docx import Document
 from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Langchain_Call import append_to_vectorstore,reset_vectorstore
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.evaluate import eval
 
 def updated_text_based():
     w1, col1, w2, col2, w3 = st.columns([1, 5, 1, 5, 1]) 
@@ -90,6 +91,10 @@ def updated_text_based():
             st.session_state["eval_result_df"] = None
         if "improved_response_lgn" not in st.session_state:
             st.session_state['improved_response_lgn'] = None
+        if "eval_df_1" not in st.session_state:
+            st.session_state["eval_df_1"] = None
+        if "eval_df_2" not in st.session_state:
+            st.session_state["eval_df_2"] = None
 
         # Add custom CSS for styling chat
         st.markdown(
@@ -215,6 +220,8 @@ def updated_text_based():
                                     vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
                                 )
                                 st.session_state.thread = st.session_state.client.beta.threads.create()
+
+                                concatenated_df = eval(st.session_state["eval_df_1"],st.session_state["eval_df_2"])
                                 
 
                                 # Append improved response and tables with headings
@@ -227,7 +234,7 @@ def updated_text_based():
                                         "feedback_table_heading": "Optimized LLM response based on human feedback:",
                                         "feedback_table": step_3,
                                         "third_table_heading": "Model Evaluation:", 
-                                        "third_table": st.session_state["eval_result_df"]
+                                        "third_table": concatenated_df
                                     }
                                 )
                                 st.write("User Feedback has been successfully saved to the OpenAI Vector Database")
@@ -273,6 +280,8 @@ def updated_text_based():
                                 text = f"\n\n{user_message}\n\n{assistant_message}"
                                 append_to_vectorstore(text)
 
+                                concatenated_df = eval(st.session_state["eval_df_1"],st.session_state["eval_df_2"])
+
                                 # Append improved response and tables with headings
                                 st.session_state.messages.append(
                                     {
@@ -283,7 +292,7 @@ def updated_text_based():
                                         "feedback_table_heading": "Optimized LLM responses based on human feedback:",
                                         "feedback_table": step_3,
                                         "third_table_heading": "Model Evaluation:",  
-                                        "third_table": st.session_state["eval_result_df"],
+                                        "third_table": concatenated_df,
                                     }
                                 )
                                 st.write("User Feedback has been successfully saved to the Chroma Vector Database")
@@ -365,7 +374,7 @@ def updated_text_based():
                                 # st.write("User Feedback has been successfully saved to the OpenAI Vector Database")
                                 append_to_vectorstore(text)
                                 
-                                # st.session_state["improved_response"] = None
+                                concatenated_df = eval(st.session_state["eval_df_1"],st.session_state["eval_df_2"])
 
                                 # Append improved response and tables with headings
                                 st.session_state.messages.append(
@@ -377,7 +386,7 @@ def updated_text_based():
                                         "feedback_table_heading": "Optimized LLM response based on human feedback:",
                                         "feedback_table": step_3,
                                         "third_table_heading": "Model Evaluation:",  # Add heading for the third table
-                                        "third_table": st.session_state["eval_result_df"],
+                                        "third_table": concatenated_df,
                                     }
                                 )
                                 st.write("User Feedback has been successfully saved to the OpenAI and Chroma Vector Database")
@@ -419,6 +428,7 @@ def updated_text_based():
             "model":["GPT (with Langchain)"]
         }
         data_eval_1 = pd.DataFrame(data_eval_lang)
+        st.session_state["eval_df_1"] = data_eval_1
         data_eval_openai = {
             "input_prompt": [st.session_state["prompt"]],
             "response": [st.session_state["first_response"]],
@@ -426,56 +436,21 @@ def updated_text_based():
             "model":["GPT (Standard)"]
         }
         data_eval_2 = pd.DataFrame(data_eval_openai)
+        st.session_state["eval_df_2"] = data_eval_2
         
-        vAR_eval_df1_rel = multiturn_generate_content_rel(data_eval_1)
-        vAR_eval_df1_indirect = multiturn_generate_content_indirect(data_eval_1)
-        vAR_eval_df1_faith = multiturn_generate_faithfull(data_eval_1)
-        vAR_eval_df1_correctness = multiturn_generate_correctness(data_eval_1)
-
-        vAR_eval_df2_rel = multiturn_generate_content_rel(data_eval_2)
-        vAR_eval_df2_indirect = multiturn_generate_content_indirect(data_eval_2)
-        vAR_eval_df2_faith = multiturn_generate_faithfull(data_eval_2)
-        vAR_eval_df2_correctness = multiturn_generate_correctness(data_eval_2)
-
-        concatenated_df = pd.concat([vAR_eval_df1_rel, vAR_eval_df1_indirect,vAR_eval_df1_faith,vAR_eval_df1_correctness,vAR_eval_df2_rel,vAR_eval_df2_indirect,vAR_eval_df2_faith,vAR_eval_df2_correctness], ignore_index=True)
+        concatenated_df = eval(st.session_state["eval_df_1"],st.session_state["eval_df_2"])
         st.session_state["eval_result_df"] = concatenated_df
         st.session_state.messages.append(
             {
                 "role": "assistant",
                 "content": "",
                 "table_heading": "Model Response:",
-                "table": step_1
+                "table": step_1,
+                "feedback_table_heading": "Model Evaluation:",
+                "feedback_table": st.session_state["eval_result_df"],
             }
         )
         st.rerun()
-    
-    
-    # if st.session_state["langchain_reference"] != None:
-    #     if st.session_state["langchain_reference"] != st.session_state["present_langchain_reference"] or st.session_state["improved_response"] != None:
-    #         data_eval_lang = {
-    #             "input_prompt": [st.session_state["prompt"]],
-    #             "response": [st.session_state["first_response"]],
-    #             "reference_text": [st.session_state["langchain_reference"]],
-    #             "model":["GPT (with Langchain)"]
-    #         }
-    #         data_eval_1 = pd.DataFrame(data_eval_lang)
-    #         data_eval_openai = {
-    #             "input_prompt": [st.session_state["prompt"]],
-    #             "response": [st.session_state["first_response"]],
-    #             "reference_text": [st.session_state["langchain_reference"]],
-    #             "model":["GPT (Standard)"]
-    #         }
-    #         data_eval_2 = pd.DataFrame(data_eval_openai)
-            
-    #         vAR_eval_df1_rel = multiturn_generate_content_rel(data_eval_1)
-    #         vAR_eval_df1_indirect = multiturn_generate_content_indirect(data_eval_1)
-    #         vAR_eval_df2_rel = multiturn_generate_content_rel(data_eval_2)
-    #         vAR_eval_df2_indirect = multiturn_generate_content_indirect(data_eval_2)
-            
-    #         concatenated_df = pd.concat([vAR_eval_df1_rel, vAR_eval_df1_indirect,vAR_eval_df2_rel,vAR_eval_df2_indirect], ignore_index=True)
-    #         st.session_state.messages.append({"role": "assistant", "content": "", "table_heading": "Model Evaluation:","table": concatenated_df})
-    #         st.session_state["present_langchain_reference"] = st.session_state["langchain_reference"]
-    #         st.rerun()
         
     with m2:
         if st.button("Reset VectorDB"):
