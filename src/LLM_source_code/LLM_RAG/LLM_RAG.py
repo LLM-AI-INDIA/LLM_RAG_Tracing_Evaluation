@@ -20,6 +20,7 @@ from functools import partial
 from multiprocessing import Pool
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_Agent_Call import bedrock_agent_chat
 from src.LLM_source_code.LLM_RAG.LLM_Bedrock_MultiAgent_Call import bedrock_multi_agent_chat
+from src.LLM_source_code.LLM_RAG.LLM_Bedrock_MultiAgent_Router_Call import bedrock_multi_agent_router_chat
 
 
 
@@ -491,6 +492,13 @@ def LLM_RAG_Impl(choice):
     vAR_eval_llm = None
     vAR_eval_type = None
 
+    vAR_agent_details = {
+        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
+        "Agent Role": ["Supervisor", "Collaborator", "Collaborator"],
+        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
+        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
+    }
+
     with col2:
         st.write("")
         st.markdown("<h3 style='font-size:16px;'>Select Use Case</h3>", unsafe_allow_html=True)
@@ -700,22 +708,42 @@ def LLM_RAG_Impl(choice):
                 vAR_platform = st.selectbox(" ",("AWS Bedrock"))
                 st.write("")
         with col32:
-            data = {
-        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
-        "Agent Role": ["Supervisor", "Collaborator", "Collaborator"],
-        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
-        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
-    }
+            
 
             # Create the DataFrame
-            df = pd.DataFrame(data)
+            df = pd.DataFrame(vAR_agent_details)
 
             st.table(df)
-
-
             
         if vAR_model and vAR_platform:
             bedrock_multi_agent_chat()
+
+    elif vAR_usecase=="Policy Guru" and choice=="LLM Multi Agent Router":
+        
+        with col17: 
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
+        with col19:
+            vAR_model = st.selectbox(" ",("Claude-3.5-sonnet(Supervisor & Collaborator Agent)"))
+            st.write("")
+
+        with col7:
+            st.write("")
+            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
+        with col9:
+            if vAR_model:
+                vAR_platform = st.selectbox(" ",("AWS Bedrock"))
+                st.write("")
+        with col32:
+            
+
+            # Create the DataFrame
+            df = pd.DataFrame(vAR_agent_details)
+
+            st.table(df)
+            
+        if vAR_model and vAR_platform:
+            bedrock_multi_agent_router_chat()
             
   
 
