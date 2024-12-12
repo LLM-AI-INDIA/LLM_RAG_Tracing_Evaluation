@@ -499,6 +499,13 @@ def LLM_RAG_Impl(choice):
         "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
     }
 
+    vAR_router_agent_details = {
+        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
+        "Agent Role": ["Supervisor Routing", "Collaborator", "Collaborator"],
+        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
+        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
+    }
+
     with col2:
         st.write("")
         st.markdown("<h3 style='font-size:16px;'>Select Use Case</h3>", unsafe_allow_html=True)
@@ -738,7 +745,7 @@ def LLM_RAG_Impl(choice):
             
 
             # Create the DataFrame
-            df = pd.DataFrame(vAR_agent_details)
+            df = pd.DataFrame(vAR_router_agent_details)
 
             st.table(df)
             
