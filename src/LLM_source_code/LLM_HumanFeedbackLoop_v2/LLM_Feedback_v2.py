@@ -209,11 +209,12 @@ def updated_text_based():
                                 vector_store_files = st.session_state.client.beta.vector_stores.files.list(
                                     vector_store_id=os.getenv("VECTOR_STORE_ID")
                                 )
-                                if vector_store_files.data:
-                                    file_ids = vector_store_files.data[0].id
+                                for i in range(len(vector_store_files.data)):
+                                    file_ids = vector_store_files.data[i].id
                                     st.session_state.client.beta.vector_stores.files.delete(
                                         vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
                                     )
+                                    print(f"The file id is {file_ids} in deleted", len(vector_store_files.data))
                                 response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
                                 file_id = response.id
                                 st.session_state.client.beta.vector_stores.files.create(
@@ -360,11 +361,12 @@ def updated_text_based():
                                 vector_store_files = st.session_state.client.beta.vector_stores.files.list(
                                     vector_store_id=os.getenv("VECTOR_STORE_ID")
                                 )
-                                if vector_store_files.data:
-                                    file_ids = vector_store_files.data[0].id
+                                for i in range(len(vector_store_files.data)):
+                                    file_ids = vector_store_files.data[i].id
                                     st.session_state.client.beta.vector_stores.files.delete(
                                         vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
                                     )
+                                    print(f"The file id is {file_ids} in deleted", len(vector_store_files.data))
                                 response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
                                 file_id = response.id
                                 st.session_state.client.beta.vector_stores.files.create(
@@ -455,7 +457,7 @@ def updated_text_based():
     with m2:
         if st.button("Reset VectorDB"):
             try:
-                # st.session_state.clear()
+                st.session_state.clear()
                 Update_vector()
                 reset_vectorstore("DMV_FAQ.docx")
                 st.session_state.thread = st.session_state.client.beta.threads.create()
