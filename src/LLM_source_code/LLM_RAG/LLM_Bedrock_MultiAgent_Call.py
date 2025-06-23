@@ -95,7 +95,7 @@ def multi_agent_call(vAR_user_input):
 
 
 def bedrock_multi_agent_chat():
-    vAR_agent_id_map = {os.environ["CSRU_AGENT_ID"]:"CSRU Agent",os.environ["SPU_AGENT_ID"]:"SPU Agent"}
+    vAR_agent_id_map = {os.environ["CALPERS_MEMBERS_AGENT_ID"]:"Calpers Member Agent",os.environ["CALPERS_EMPLOYERS_AGENT_ID"]:"Calpers Employer Agent"}
     # Initialize session state
     if 'history_agent' not in st.session_state:
         st.session_state['history_agent'] = []

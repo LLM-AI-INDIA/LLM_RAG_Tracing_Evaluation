@@ -152,6 +152,8 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source,end_session=False):
 
 
 def bedrock_agent_chat(vaR_file_obj,vAR_source):
+
+    vAR_agent_id_map = {os.environ["CALPERS_MEMBERS_AGENT_ID"]:"Calpers Member Agent",os.environ["CALPERS_EMPLOYERS_AGENT_ID"]:"Calpers Employer Agent",os.environ["CALPERS_LAW_AGENT_ID"]:"Calpers Law Agent"}
     # Initialize session state
     if 'history_agent' not in st.session_state:
         st.session_state['history_agent'] = []
@@ -168,12 +170,16 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
     vAR_file_generated = False
     vAR_delete_memory = None
     vAR_memory_content = None
+    vAR_agent_id_set = set()
+    vAR_trace_obj_list = None
+    vAR_processor_agent_list = []
 
     col1,col2,col3 = st.columns([5,2,5])
     col4,col5,col6 = st.columns([1,8,1])
 
     if "vAR_trace_list" not in st.session_state:
         st.session_state.vAR_trace_list = []
+        st.session_state.vAR_processor_agent_list = []
 
     with container:
         with st.form(key='my_agent_form', clear_on_submit=True):
@@ -193,6 +199,22 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
             print("st.session_state.vAR_trace_list - ",st.session_state.vAR_trace_list)
             st.session_state['generated_agent'].append(vAR_agent_response)
 
+        if vAR_trace_obj_list:
+            for trace in vAR_trace_obj_list:
+                print("trace type- ",type(trace))
+                trace = json.loads(trace)
+                print("trace - ",trace)
+                print("trace type- ",type(trace))
+                vAR_agent_id_set.add(trace["agentId"])
+
+            print("vAR_agent_id_set - ",vAR_agent_id_set)
+        if vAR_agent_id_set:
+            for agent_id in vAR_agent_id_set:
+                if vAR_agent_id_map.get(agent_id):
+                    vAR_processor_agent_list.append(vAR_agent_id_map.get(agent_id))
+            st.session_state.vAR_processor_agent_list.append(vAR_processor_agent_list)
+            print("vAR_processor_agent_list - ",vAR_processor_agent_list)
+            print("vAR_processor_agent_list session state - ",st.session_state.vAR_processor_agent_list)
 
         if st.session_state['generated_agent']:
             with response_container:
@@ -211,6 +233,12 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
                             st.write("")
                             st.write("")
+                        if i>0:
+                            if len(st.session_state.vAR_processor_agent_list[i-1])==0:
+                                st.session_state.vAR_processor_agent_list[i-1] = ["Supervisor Agent"]
+                            vAR_processor_str = "<h4 style='font-size:16px;'>Processor of the Response :"+str(st.session_state.vAR_processor_agent_list[i-1])+"</h4>"
+                            st.markdown("<h4 style='font-size:16px;'>Response Generating Agent : Supervisor Agent</h4>", unsafe_allow_html=True)
+                            st.markdown(vAR_processor_str, unsafe_allow_html=True)
                 if len(st.session_state['generated_agent'])>1:
                     with col1:
                         if st.button("Click Here for Trace!",key="button_key"):

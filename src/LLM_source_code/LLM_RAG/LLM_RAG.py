@@ -109,8 +109,8 @@ def ConversationWoEval(vAR_model):
             col1,col2,col3,col4 = st.columns([7,3,5,1])
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>LLM Response Summary</h3>", unsafe_allow_html=True)
-            with col2:
-                st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
+            # with col2:
+            #     st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
             # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
             
@@ -130,7 +130,7 @@ def ConversationWoEval(vAR_model):
             #     Bigquery_Insert(assistant_thread_id,vAR_user_input,vAR_assistant_response,assistant_request_id,assistant_response_id,"OpenAI-Assistant-GPT-4")
             
             # Below code can be changes later
-            Bigquery_Insert("001",vAR_user_input,vAR_response_bedrock,1,2,"Anthropic-Claude-3.5-Sonnet")
+            # Bigquery_Insert("001",vAR_user_input,vAR_response_bedrock,1,2,"Anthropic-Claude-3.5-Sonnet")
             # Bigquery_Insert(vertex_thread_id,vAR_user_input,vAR_response_vertex,vertex_request_id,vertex_response_id,"Gemini-1.5-Flash")
             
             # # Eval Insertion
@@ -307,8 +307,8 @@ def ConversationWithEval(vAR_model):
             col1,col2,col3,col4 = st.columns([7,3,5,1])
             with col1:
                 st.markdown("<h3 style='font-size:18px;'>LLM Response Summary</h3>", unsafe_allow_html=True)
-            with col2:
-                st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
+            # with col2:
+            #     st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee")
 
             # vAR_final_df = vAR_final_df.reset_index().rename(columns={'index': '#'})
             
@@ -360,31 +360,31 @@ def ConversationWithEval(vAR_model):
                 col1,col2,col3,col4 = st.columns([7,3,5,1])
                 with col1:
                     st.markdown("<h3 style='font-size:18px;'>Judge (GPT4) Reasoning and Evaluation Score</h3>", unsafe_allow_html=True)
-                with col2:
-                    st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
+                # with col2:
+                #     st.link_button("Report View","https://lookerstudio.google.com/reporting/f7586dea-e417-44c9-bc6b-f5ba3dee09ee/page/p_55e0w4zfmd")
 
                 st.table(vAR_final_eval_df)
 
                 
-                # Bigquery Insert based on model selection
-                if vAR_model in ["All", "gpt-4(Azure OpenAI)","gpt-4o(Azure OpenAI)"]:
-                    if vAR_model == "All" or vAR_model=="gpt-4o(Azure OpenAI)":
-                        Bigquery_Insert(assistant_thread_id, vAR_user_input, vAR_assistant_response, 
-                                        assistant_request_id, assistant_response_id, "OpenAI-Assistant-GPT-4o")
-                    else:
-                        Bigquery_Insert(assistant_thread_id, vAR_user_input, vAR_assistant_response, 
-                                        assistant_request_id, assistant_response_id, "OpenAI-Assistant-GPT-4")
+                # # Bigquery Insert based on model selection
+                # if vAR_model in ["All", "gpt-4(Azure OpenAI)","gpt-4o(Azure OpenAI)"]:
+                #     if vAR_model == "All" or vAR_model=="gpt-4o(Azure OpenAI)":
+                #         Bigquery_Insert(assistant_thread_id, vAR_user_input, vAR_assistant_response, 
+                #                         assistant_request_id, assistant_response_id, "OpenAI-Assistant-GPT-4o")
+                #     else:
+                #         Bigquery_Insert(assistant_thread_id, vAR_user_input, vAR_assistant_response, 
+                #                         assistant_request_id, assistant_response_id, "OpenAI-Assistant-GPT-4")
                 
-                if vAR_model in ["All", "claude-3.5-sonnet(Bedrock)"]:
-                    Bigquery_Insert(bedrock_thread_id, vAR_user_input, vAR_response_bedrock, 
-                                    bedrock_request_id, bedrock_response_id, "Anthropic-Claude-3.5-Sonnet")
+                # if vAR_model in ["All", "claude-3.5-sonnet(Bedrock)"]:
+                #     Bigquery_Insert(bedrock_thread_id, vAR_user_input, vAR_response_bedrock, 
+                #                     bedrock_request_id, bedrock_response_id, "Anthropic-Claude-3.5-Sonnet")
                 
-                if vAR_model in ["All", "gemini-1.5(Vertex AI)"]:
-                    Bigquery_Insert(vertex_thread_id, vAR_user_input, vAR_response_vertex, 
-                                    vertex_request_id, vertex_response_id, "Gemini-1.5-Flash")
+                # if vAR_model in ["All", "gemini-1.5(Vertex AI)"]:
+                #     Bigquery_Insert(vertex_thread_id, vAR_user_input, vAR_response_vertex, 
+                #                     vertex_request_id, vertex_response_id, "Gemini-1.5-Flash")
 
-                # Eval Insertion
-                Bigquery_Eval_Insert(vAR_final_eval_df2)
+                # # Eval Insertion
+                # Bigquery_Eval_Insert(vAR_final_eval_df2)
 
 
 
@@ -493,27 +493,27 @@ def LLM_RAG_Impl(choice):
     vAR_eval_type = None
 
     vAR_agent_details = {
-        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
-        "Agent Role": ["Supervisor", "Collaborator", "Collaborator"],
-        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
-        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
+        "Agent Name": ["Calpers Supervisor Agent", "Calpers Members Agent", "Calpers Employer Agent","Calpers Analytics Agent","Calpers Law Agent"],
+        "Agent Role": ["Supervisor", "Collaborator", "Collaborator","Collaborator","Collaborator"],
+        "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet","Claude-3.5-Sonnet","Claude-3.5-Sonnet"],
+        "Agent Functionality": ["Guardrails", "Knowledgebase", "Knowledgebase","Code Interpreter","Knowledgebase"]
     }
 
     vAR_router_agent_details = {
-        "Agent Name": ["CSRU & SPU Supervisor Agent", "CSRU Agent", "SPU Agent"],
+        "Agent Name": ["Calpers Supervisor Agent", "Calpers Members Agent", "Calpers Employer Agent"],
         "Agent Role": ["Supervisor Routing", "Collaborator", "Collaborator"],
         "Agent Model(LLM)": ["Claude-3.5-Sonnet", "Claude-3.5-Sonnet", "Claude-3.5-Sonnet"],
-        "Agent Functionality": ["Guardrails", "Action Group", "Action Group"]
+        "Agent Functionality": ["Guardrails", "Knowledgebase", "Knowledgebase"]
     }
 
     with col2:
         st.write("")
         st.markdown("<h3 style='font-size:16px;'>Select Use Case</h3>", unsafe_allow_html=True)
     with col4:
-        vAR_usecase = st.selectbox(" ",("Policy Guru","Multimodal RAG"))
+        vAR_usecase = st.selectbox(" ",("Calpers Customer Service Agent","Multimodal RAG"))
         st.write("")
 
-    if vAR_usecase=="Policy Guru" and choice=="LLM Guardrail":
+    if vAR_usecase=="Calpers Customer Service Agent" and choice=="LLM Guardrail":
 
         with col17:
             st.write("")
@@ -544,7 +544,7 @@ def LLM_RAG_Impl(choice):
                 st.markdown("<h3 style='font-size:16px;'>Select Sensitive Data</h3>", unsafe_allow_html=True)
 
             with col29:
-                vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number(Mask)","Vehicle Identification Number(VIN)(Mask)","US Social Security Number(SSN)(Block)","Password(Block)"))
+                vAR_guard_2ndlvl_category = st.selectbox(" ",("US Passport Number(Mask)","CalPERS Member Id(Mask)","US Social Security Number(SSN)(Block)","CalPERS Password(Block)"))
                 st.write("")
         elif vAR_guard_category=="Word filters":
             with col27:
@@ -552,7 +552,7 @@ def LLM_RAG_Impl(choice):
                 st.markdown("<h3 style='font-size:16px;'>Select Word Filter Data</h3>", unsafe_allow_html=True)
 
             with col29:
-                vAR_guard_2ndlvl_category = st.selectbox(" ",("LICENSE PLATE","SSN","VIN","DL","RN"))
+                vAR_guard_2ndlvl_category = st.selectbox(" ",("Politics","Bribe","Illegal"))
                 st.write("")
         elif vAR_guard_category=="Denied Topics":
             with col27:
@@ -568,7 +568,7 @@ def LLM_RAG_Impl(choice):
                 st.markdown("<h3 style='font-size:16px;'>Select Phrase Filters</h3>", unsafe_allow_html=True)
 
             with col29:
-                vAR_guard_2ndlvl_category = st.selectbox(" ",("Speeding Drivers","Return to India","Indefatigable India"))
+                vAR_guard_2ndlvl_category = st.selectbox(" ",("Go back to home","Return to India","Indefatigable India"))
                 st.write("")
         elif vAR_guard_category=="Prompt attacks":
             with col27:
@@ -602,7 +602,7 @@ def LLM_RAG_Impl(choice):
 
 
 
-    elif vAR_usecase=="Policy Guru" and choice=="LLM as a Judge":
+    elif vAR_usecase=="Calpers Customer Service Agent" and choice=="LLM as a Judge":
         
         with col17:
             st.write("")
@@ -649,7 +649,7 @@ def LLM_RAG_Impl(choice):
         else:
             st.warning("Please select proper LLM as Judge Options!")
 
-    elif vAR_usecase=="Policy Guru" and choice=="LLM Agent":
+    elif vAR_usecase=="Calpers Customer Service Agent" and choice=="LLM Multi Agent":
 
         vAR_elp_file_upload = None
         vAR_elp_file_s3 = None
@@ -689,6 +689,11 @@ def LLM_RAG_Impl(choice):
             if vAR_delete_memory=="Yes":
                 delete_memory()
                 st.info("Memory successfully deleted!")
+        with col32:
+            # Create the DataFrame
+            df = pd.DataFrame(vAR_agent_details)
+
+            st.table(df)
 
         if vAR_elp_file_upload:
             bedrock_agent_chat(vAR_elp_file_upload,"UPLOAD")
@@ -698,34 +703,34 @@ def LLM_RAG_Impl(choice):
             bedrock_agent_chat(vAR_elp_file_s3,"")
 
 
-    elif vAR_usecase=="Policy Guru" and choice=="LLM Multi Agent":
+    # elif vAR_usecase=="Calpers Customer Service Agent" and choice=="LLM Multi Agent":
         
-        with col17: 
-            st.write("")
-            st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
-        with col19:
-            vAR_model = st.selectbox(" ",("Claude-3.5-sonnet(Supervisor & Collaborator Agent)"))
-            st.write("")
+    #     with col17: 
+    #         st.write("")
+    #         st.markdown("<h3 style='font-size:16px;'>Select LLM</h3>", unsafe_allow_html=True)
+    #     with col19:
+    #         vAR_model = st.selectbox(" ",("Claude-3.5-sonnet(Supervisor & Collaborator Agent)"))
+    #         st.write("")
 
-        with col7:
-            st.write("")
-            st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
-        with col9:
-            if vAR_model:
-                vAR_platform = st.selectbox(" ",("AWS Bedrock"))
-                st.write("")
-        with col32:
+    #     with col7:
+    #         st.write("")
+    #         st.markdown("<h3 style='font-size:16px;'>Select Platform</h3>", unsafe_allow_html=True)
+    #     with col9:
+    #         if vAR_model:
+    #             vAR_platform = st.selectbox(" ",("AWS Bedrock"))
+    #             st.write("")
+    #     with col32:
             
 
-            # Create the DataFrame
-            df = pd.DataFrame(vAR_agent_details)
+    #         # Create the DataFrame
+    #         df = pd.DataFrame(vAR_agent_details)
 
-            st.table(df)
+    #         st.table(df)
             
-        if vAR_model and vAR_platform:
-            bedrock_multi_agent_chat()
+    #     if vAR_model and vAR_platform:
+    #         bedrock_multi_agent_chat()
 
-    elif vAR_usecase=="Policy Guru" and choice=="LLM Multi Agent Router":
+    elif vAR_usecase=="Calpers Customer Service Agent" and choice=="LLM Multi Agent Router":
         
         with col17: 
             st.write("")

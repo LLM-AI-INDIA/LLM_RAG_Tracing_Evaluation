@@ -24,7 +24,7 @@ def updated_text_based():
     with col1:
         st.markdown("<div style='height:4rem; line-height:4rem; font-weight: bold;'>Select Use Case</div>", unsafe_allow_html=True)
     with col2:
-        vAR_usecase = st.selectbox(" ", ("Policy Guru", "Multimodal RAG"))
+        vAR_usecase = st.selectbox(" ", ("Calpers Customer Service Agent", "Multimodal RAG"))
 
     # Row 2: Select LLM
     with col1:
@@ -53,7 +53,7 @@ def updated_text_based():
         st.markdown("<div style='height:5.1rem; line-height:5.1rem; font-weight: bold;'>Select LLM as a Judge Model (Evaluator)</div>", 
                     unsafe_allow_html=True)
     with col2:
-        vAR_eval_llm = st.selectbox(" ", ("Gemini", "GPT", "Claude"))
+        vAR_eval_llm = st.selectbox(" ", ("GPT", "Gemini", "Claude"))
 
     # # Row 5: Select LLM as a Judge Type
     # with col1:
@@ -406,9 +406,9 @@ def updated_text_based():
         # Generate assistant response with a table
         response_text = assistant_call_with_annotation(prompt)
         st.session_state["first_response"] = response_text
-        project_id = "elp-2022-352222"
-        dataset_id = "DMV_ELP"
-        table_name = "prompt_and_response"
+        project_id = "genai-poc-424806"
+        dataset_id = "TEST"
+        table_name = "PROMPT_RESPONSE"
 
         expected_response = get_expected_response(project_id, dataset_id, table_name, prompt)
         st.session_state["expected_response"] = expected_response

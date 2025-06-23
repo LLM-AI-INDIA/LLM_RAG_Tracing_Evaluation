@@ -1,8 +1,9 @@
 import base64
 import vertexai
 from vertexai.generative_models import GenerativeModel, SafetySetting, Part
-from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Eval_prompt import prompt_template_relevance,prompt_template_IndirectAttack,prompt_template_answer_correctness,prompt_template_faithfulness
+from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Eval_prompt import prompt_template_relevance,prompt_template_IndirectAttack,prompt_template_answer_correctness,prompt_template_faithfulness,prompt_template_hallucination
 import pandas as pd
+from openai import OpenAI
 
 system_instruction_relevance = '''
     You are an evaluator tasked with assessing the relevance of a given response to an input prompt, using a reference text for context. 
@@ -82,6 +83,9 @@ system_instruction_correctnes = '''
     **Correctness Score:** [0 or 1]
     **Reasoning:** [Your reasoning here.]
         '''
+
+client = OpenAI()
+
 def safety():
     safety_settings = [
         SafetySetting(
@@ -103,100 +107,144 @@ def safety():
     ]
     return safety_settings
 def multiturn_generate_content_rel(df):
-    generation_config = {
-        "max_output_tokens": 8192,
-        "temperature": 1,
-        "top_p": 0.95,
-    }
-    safety_settings = safety()
-    vertexai.init(project="elp-2022-352222", location="us-central1")
 
-    model = GenerativeModel(
-        "gemini-1.5-flash-002",
-        
-        system_instruction=[system_instruction_relevance]
+    print("$$$Relevance text - ",prompt_template_relevance(df))
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+        "role": "system",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt_template_relevance(df)
+            }
+        ]
+        }
+    ],
+    response_format={
+        "type": "text"
+    },
+    temperature=1,
+    max_completion_tokens=2048,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
     )
-    chat = model.start_chat()
-    response = chat.send_message(
-        [prompt_template_relevance(df)],
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    response = response.text
+    response = response.choices[0].message.content
     df_response = response_to_df(str(response),df)
+    
     return df_response
 
 def multiturn_generate_content_indirect(df):
-    generation_config = {
-        "max_output_tokens": 8192,
-        "temperature": 1,
-        "top_p": 0.95,
-    }
-    safety_settings = safety()
-    vertexai.init(project="elp-2022-352222", location="us-central1")
 
-    model = GenerativeModel(
-        "gemini-1.5-flash-002",
-        
-        system_instruction=[system_instruction_indirect]
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+        "role": "system",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt_template_IndirectAttack(df)
+            }
+        ]
+        }
+    ],
+    response_format={
+        "type": "text"
+    },
+    temperature=1,
+    max_completion_tokens=2048,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
     )
-    chat = model.start_chat()
-    response = chat.send_message(
-        [prompt_template_IndirectAttack(df)],
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    response = response.text
+    response = response.choices[0].message.content
     print("##########", response)
     df_response = resp_to_df_indirectattack(str(response),df)
     return df_response
 
 def multiturn_generate_faithfull(df):
-    generation_config = {
-        "max_output_tokens": 8192,
-        "temperature": 1,
-        "top_p": 0.95,
-    }
-    safety_settings = safety()
-    vertexai.init(project="elp-2022-352222", location="us-central1")
-
-    model = GenerativeModel(
-        "gemini-1.5-flash-002",
-        
-        system_instruction=[system_instruction_faithfull]
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+        "role": "system",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt_template_faithfulness(df)
+            }
+        ]
+        }
+    ],
+    response_format={
+        "type": "text"
+    },
+    temperature=1,
+    max_completion_tokens=2048,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
     )
-    chat = model.start_chat()
-    response = chat.send_message(
-        [prompt_template_faithfulness(df)],
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    response = response.text
+    response = response.choices[0].message.content
     df_response = resp_to_df_faithfulness(str(response),df)
     return df_response
 
 def multiturn_generate_correctness(df):
-    generation_config = {
-        "max_output_tokens": 8192,
-        "temperature": 1,
-        "top_p": 0.95,
-    }
-    safety_settings = safety()
-    vertexai.init(project="elp-2022-352222", location="us-central1")
-
-    model = GenerativeModel(
-        "gemini-1.5-flash-002",
-        
-        system_instruction=[system_instruction_correctnes]
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+        "role": "system",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt_template_answer_correctness(df)
+            }
+        ]
+        }
+    ],
+    response_format={
+        "type": "text"
+    },
+    temperature=1,
+    max_completion_tokens=2048,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
     )
-    chat = model.start_chat()
-    response = chat.send_message(
-        [prompt_template_answer_correctness(df)],
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    response = response.text
+    response = response.choices[0].message.content
     df_response = resp_to_df_correctness(str(response),df)
+    return df_response
+
+
+def multiturn_generate_hallucinate(df):
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+        "role": "system",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt_template_hallucination(df)
+            }
+        ]
+        }
+    ],
+    response_format={
+        "type": "text"
+    },
+    temperature=1,
+    max_completion_tokens=2048,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
+    )
+    response = response.choices[0].message.content
+    df_response = resp_to_df_hallucinate(str(response),df)
     return df_response
 
 #------------------------------------------------------------------------------------------------------ #
@@ -286,6 +334,29 @@ def resp_to_df_correctness(response,df):
         "Model" : [df['model'].iloc[0]],
         "Metrics category": ["Generation"],
         "Metrics": ["Correctness"],
+        "Score": [score],
+        "Explanation": [explanation] 
+    }
+    return pd.DataFrame(data)
+
+
+def resp_to_df_hallucinate(response,df):
+    # Extract score and explanation from the response
+    lines = response.strip().split("\n")
+    score = None
+    explanation = None
+    
+    for line in lines:
+        if line.startswith("**Hallucinated Score:**"):
+            score = int(line.replace("**Hallucinated Score:**", "").strip())
+        elif line.startswith("**Reasoning:**"):
+            explanation = line.replace("**Reasoning:**", "").strip()
+
+    # Create the DataFrame
+    data = {
+        "Model" : [df['model'].iloc[0]],
+        "Metrics category": ["Generation"],
+        "Metrics": ["Hallucinated"],
         "Score": [score],
         "Explanation": [explanation] 
     }

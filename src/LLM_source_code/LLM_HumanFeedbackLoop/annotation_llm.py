@@ -7,7 +7,7 @@ from docx import Document
 import re
 import shutil
 
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\Admin\Downloads\elp-2022-352222-230ab152d47c.json"
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\Admin\Downloads\genai-poc-424806-d647cdf36334.json"
 
 # Initialize the BigQuery client
 biq_query_client = bigquery.Client()

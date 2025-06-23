@@ -56,12 +56,12 @@
     border: none;
 }
 
-/* dmv logo */
+/* main page logo */
 #root > div:nth-child(1) > div.withScreencast > div > div > div > section.stMain.st-emotion-cache-bm2z3a.ea3mdgi8 > div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 > div > div > div > div:nth-child(3) > div > div > div > img{
-    max-width: 15% !important;
-    margin-left: 42%;
-    position: relative;
-    top: -65px;;
+    max-width: 65% !important;
+    margin-left: 25%;
+    position: absolute;
+    top: -100px;
 }
 
 

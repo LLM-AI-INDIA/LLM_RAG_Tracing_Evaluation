@@ -1,5 +1,5 @@
 import os
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import OpenAI
 from langchain import hub
 from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -12,7 +12,7 @@ from google.cloud import storage
 import chromadb.api
 
 # GCP Bucket and Local Path Configurations
-BUCKET_NAME = "persist_storage"         # Name of your GCP bucket
+BUCKET_NAME = "persist_storage_calpers"         # Name of your GCP bucket
 GCP_DB_PATH = "chroma_store"           # Path in the bucket for the Chroma DB folder
 LOCAL_DB_PATH = "./chroma_store"       # Local directory to store Chroma DB
 
@@ -53,11 +53,15 @@ def langchain_rag(input_prompt):
         print("Using local Chroma DB.")
 
     # Initialize the language model
-    llm = AzureChatOpenAI(
-        azure_deployment="gpt-4o",
-        api_key=os.environ["AZURE_OPENAI_API_KEY"],
-        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-        api_version="2024-05-01-preview"
+    # llm = AzureChatOpenAI(
+    #     azure_deployment="gpt-4o",
+    #     api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    #     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    #     api_version="2024-05-01-preview"
+    # )
+
+    llm = OpenAI(
+        api_key=os.environ["OPENAI_API_KEY"],
     )
 
     # Load the vector store

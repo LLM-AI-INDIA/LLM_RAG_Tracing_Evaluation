@@ -123,3 +123,37 @@ def prompt_template_answer_correctness(df):
     **Reasoning:** [Your reasoning here.]
         '''
     return prompt
+
+
+def prompt_template_hallucination(df):
+    # Example for generating answer correctness evaluation prompts using f-strings in a dataframe
+    
+    for index, row in df.iterrows():
+        input_prompt = row['input_prompt']
+        response = row['response']
+        reference_text = row['reference_text']
+        model = row['model']
+        
+        # Generate the prompt using f-strings
+        prompt = f'''
+    You are an evaluator tasked with assessing the hallucination of a given response to an input prompt, using a reference text for validation. A 'hallucination' refers to an answer that is not based on the reference text or assumes information that is not available in the reference text.
+
+    **Inputs:**
+    - **Input Prompt:** {input_prompt}
+    - **Response:** {response}
+    - **Reference Text:** {reference_text}
+
+    **Task:**
+    Evaluate the response based on its hallucination in addressing the input prompt. Specifically, assess whether the response provides appropriate information based on reference text. Provide:
+    1. **Hallucination Score:** Either **1** (Hallucinated) or **0** (Not Hallucinated).
+    2. **Reasoning:** A brief explanation (2-3 sentences) supporting the score, focusing on why the response is Hallucinated or Not Hallucinated.
+
+    **Guidelines for Evaluation:**
+    - **Hallucinated:** It indicates that the answer provides factually inaccurate information to the query based on the reference text.
+    - **Not Hallucinated:** It indicates that the answer to the question is correct relative to the reference text, and does not contain made up information.
+
+    **Output Format:**
+    **Hallucinated Score:** [0 or 1]
+    **Reasoning:** [Your reasoning here.]
+        '''
+    return prompt

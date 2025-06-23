@@ -16,7 +16,7 @@ def generate(input,vAR_model):
     vAR_retrieved_text = ""
     document1 = Part.from_uri(
         mime_type="application/pdf",
-        uri="gs://dmv_elp_project/DMV FAQ.pdf",
+        uri="gs://calpers_datasource/calpers_faq/Members-CalPERS-FAQ.pdf",
     )
 
     generation_config = {
@@ -43,8 +43,8 @@ def generate(input,vAR_model):
             threshold=SafetySetting.HarmBlockThreshold.OFF
         ),
     ]
-    vAR_system_instruction = """You are a helpful DMV customer support assistant. Your job is to respond to user questions based on document provided. If you don\'t know the answer from the document provided, please respond \"I don\'t find any relevant details in the provided document\". Don\'t try to create answer apart from document provided."""
-    vertexai.init(project="elp-2022-352222", location="us-central1")
+    vAR_system_instruction = """You are a helpful CalPERS customer support assistant. Your job is to respond to user questions based on document provided. If you don\'t know the answer from the document provided, please respond \"I don\'t find any relevant details in the provided document\". Don\'t try to create answer apart from document provided."""
+    vertexai.init(project="genai-poc-424806", location="us-central1")
     model = GenerativeModel(
         "gemini-1.5-flash-002",
         system_instruction=[vAR_system_instruction]

@@ -1,6 +1,6 @@
 import streamlit as st
-# from openai import OpenAI
-from openai import AzureOpenAI
+from openai import OpenAI
+# from openai import AzureOpenAI
 import requests
 import time
 import os
@@ -44,10 +44,9 @@ def assistant_call(user_input,vAR_model):
     if 'client' not in st.session_state:
         st.session_state.request_id = 0
         st.session_state.response_id = 0
-    client = AzureOpenAI(
-azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
-api_key= os.getenv("AZURE_OPENAI_API_KEY"),
-api_version="2024-05-01-preview"
+    client = OpenAI(
+# azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
+api_key= os.getenv("OPENAI_API_KEY"),
 )
     print("Default - Azure GPT4o Initialized")
     
