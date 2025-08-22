@@ -46,7 +46,7 @@ def generate(input,vAR_model):
     vAR_system_instruction = """You are a helpful CalPERS customer support assistant. Your job is to respond to user questions based on document provided. If you don\'t know the answer from the document provided, please respond \"I don\'t find any relevant details in the provided document\". Don\'t try to create answer apart from document provided."""
     vertexai.init(project="genai-poc-424806", location="us-central1")
     model = GenerativeModel(
-        "gemini-1.5-flash-002",
+        "gemini-2.0-flash-lite",
         system_instruction=[vAR_system_instruction]
     )
     responses = model.generate_content(

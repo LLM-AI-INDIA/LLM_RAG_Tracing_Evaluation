@@ -104,7 +104,7 @@ def agent_call(vAR_user_input,vAR_file_obj,vAR_source,end_session=False):
                     print(f"Final answer ->\n{final_answer}")
                     end_event_received = True
                 if 'trace' in event:
-                    vAR_trace_obj = json.dumps(event['trace'])
+                    vAR_trace_obj = json.dumps(event['trace'],default=str)
                     vAR_trace_list.append(vAR_trace_obj)
 
                 # files contains intermediate response for code interpreter if any files have been generated.
@@ -233,7 +233,7 @@ def bedrock_agent_chat(vaR_file_obj,vAR_source):
                             st.markdown(f'<div class="{feedback_class}">Thank you for your feedback! You rated this response with a {feedback_text}.</div>', unsafe_allow_html=True)
                             st.write("")
                             st.write("")
-                        if i>0:
+                        if i>0 and  (i-1) < len(st.session_state.vAR_processor_agent_list):
                             if len(st.session_state.vAR_processor_agent_list[i-1])==0:
                                 st.session_state.vAR_processor_agent_list[i-1] = ["Supervisor Agent"]
                             vAR_processor_str = "<h4 style='font-size:16px;'>Processor of the Response :"+str(st.session_state.vAR_processor_agent_list[i-1])+"</h4>"
