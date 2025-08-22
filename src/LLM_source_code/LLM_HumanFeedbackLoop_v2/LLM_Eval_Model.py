@@ -3,6 +3,8 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, SafetySetting, Part
 from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Eval_prompt import prompt_template_relevance,prompt_template_IndirectAttack,prompt_template_answer_correctness,prompt_template_faithfulness,prompt_template_hallucination
 import pandas as pd
+import os
+
 from openai import OpenAI
 
 system_instruction_relevance = '''
@@ -84,7 +86,7 @@ system_instruction_correctnes = '''
     **Reasoning:** [Your reasoning here.]
         '''
 
-client = OpenAI()
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 def safety():
     safety_settings = [

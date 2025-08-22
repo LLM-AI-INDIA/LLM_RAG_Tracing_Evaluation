@@ -14,6 +14,8 @@ import shutil
 from docx import Document
 from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.LLM_Langchain_Call import append_to_vectorstore,reset_vectorstore
 from src.LLM_source_code.LLM_HumanFeedbackLoop_v2.evaluate import eval
+# from dotenv import load_dotenv
+# load_dotenv()
 
 def updated_text_based():
     w1, col1, w2, col2, w3 = st.columns([1, 5, 1, 5, 1]) 
@@ -205,19 +207,25 @@ def updated_text_based():
                                 doc = Document(file_path)
                                 doc.add_paragraph(text)
                                 doc.save(file_path)
+
                                 # Update vector store
-                                vector_store_files = st.session_state.client.beta.vector_stores.files.list(
-                                    vector_store_id=os.getenv("VECTOR_STORE_ID")
-                                )
+                                try:
+                                    if st.session_state.client:
+                                        print(st.session_state.client.vector_stores())
+                                except Exception as e:
+                                    print(f'Exception {e}')
+
+                                vector_store_files = st.session_state.client.vector_stores.files.list(vector_store_id=os.getenv("VECTOR_STORE_ID"))
+
                                 for i in range(len(vector_store_files.data)):
                                     file_ids = vector_store_files.data[i].id
-                                    st.session_state.client.beta.vector_stores.files.delete(
+                                    st.session_state.client.vector_stores.files.delete(
                                         vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
                                     )
                                     print(f"The file id is {file_ids} in deleted", len(vector_store_files.data))
                                 response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
                                 file_id = response.id
-                                st.session_state.client.beta.vector_stores.files.create(
+                                st.session_state.client.vector_stores.files.create(
                                     vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
                                 )
                                 st.session_state.thread = st.session_state.client.beta.threads.create()
@@ -358,18 +366,18 @@ def updated_text_based():
                                 doc.add_paragraph(text)
                                 doc.save(file_path)
                                 # Update vector store
-                                vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+                                vector_store_files = st.session_state.client.vector_stores.files.list(
                                     vector_store_id=os.getenv("VECTOR_STORE_ID")
                                 )
                                 for i in range(len(vector_store_files.data)):
                                     file_ids = vector_store_files.data[i].id
-                                    st.session_state.client.beta.vector_stores.files.delete(
+                                    st.session_state.client.vector_stores.files.delete(
                                         vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
                                     )
                                     print(f"The file id is {file_ids} in deleted", len(vector_store_files.data))
                                 response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
                                 file_id = response.id
-                                st.session_state.client.beta.vector_stores.files.create(
+                                st.session_state.client.vector_stores.files.create(
                                     vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
                                 )
                                 st.session_state.thread = st.session_state.client.beta.threads.create()
@@ -409,7 +417,7 @@ def updated_text_based():
         project_id = "genai-poc-424806"
         dataset_id = "TEST"
         table_name = "PROMPT_RESPONSE"
-
+        print(st.session_state.client)
         expected_response = get_expected_response(project_id, dataset_id, table_name, prompt)
         st.session_state["expected_response"] = expected_response
         langchain_response, langchain_reference = langchain_rag(st.session_state["prompt"])
