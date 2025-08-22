@@ -51,13 +51,15 @@ def All_Initialization():
     st.sidebar.write('')
     
     with st.sidebar:
-        col1,col2,col3 = st.columns([1.5,1.5,1.5])
+        col1,col2,col3,col4 = st.columns([1.5,1.5,1.5,1.5])
         with col1:
             st.image('src/LLM_Utility/llmatscale-logo.png')
         with col2:
-            st.image('src/LLM_Utility/aws_logo.png')
-        with col3:
             st.image('src/LLM_Utility/Google-Cloud-Platform-GCP-logo.png')
+        with col3:
+            st.image('src/LLM_Utility/aws_logo.png')
+        with col4:
+            st.image('src/LLM_Utility/AzureCloud_img.png')
             
     
     return vAR_choice1
