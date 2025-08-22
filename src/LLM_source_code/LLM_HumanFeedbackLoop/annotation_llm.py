@@ -6,8 +6,8 @@ from google.cloud import bigquery
 from docx import Document
 import re
 import shutil
-
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\Admin\Downloads\genai-poc-424806-d647cdf36334.json"
+from streamlit_chat import message
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\dines\Downloads\genai-poc-424806-8e7476a7467e.json"
 
 # Initialize the BigQuery client
 biq_query_client = bigquery.Client()
@@ -109,20 +109,20 @@ def text_based():
     if not st.session_state.file_deleted:
         try:
             file_path = "DMV_FAQ.docx"
-            vector_store_files = st.session_state.client.beta.vector_stores.files.list(
+            vector_store_files = st.session_state.client.vector_stores.files.list(
                 vector_store_id=os.getenv("VECTOR_STORE_ID")
             )
 
             if vector_store_files.data:
                 file_ids = vector_store_files.data[0].id
-                st.session_state.client.beta.vector_stores.files.delete(
+                st.session_state.client.vector_stores.files.delete(
                     vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_ids
                 )
 
             # Upload updated document to vector store
             response = st.session_state.client.files.create(file=open(file_path, "rb"), purpose="assistants")
             file_id = response.id
-            st.session_state.client.beta.vector_stores.files.create(
+            st.session_state.client.vector_stores.files.create(
                 vector_store_id=os.getenv("VECTOR_STORE_ID"), file_id=file_id
             )
 
@@ -148,7 +148,8 @@ def text_based():
         unsafe_allow_html=True,
     )
 
-    user_image_url = "https://storage.googleapis.com/macrovector-acl-eu/previews/118720/thumb_118720.webp"
+
+    user_image_url = "https://www.flaticon.com/free-icon/user_15181334?term=user&page=1&position=81&origin=tag&related_id=15181334"
     assistant_image_url = "https://cdn-icons-png.flaticon.com/512/6014/6014401.png"
 
     with m2:
